@@ -3,7 +3,15 @@
 // Presupuesto mensual, Presupuesto semanal, CPL objetivo, CPL máximo tolerable,
 // Canal publicitario, Notas y, opcional, AM (email del Account Manager).
 
-export function parseCsv(texto: string): string[][] {
+/** Separador según la primera línea: tab (pegado desde Sheets/Excel), punto y coma (Excel en español) o coma. */
+export function separador(texto: string): string {
+  const primera = texto.replace(/^\uFEFF/, '').split(/\r?\n/)[0] || '';
+  const cuenta = (c: string) => primera.split(c).length - 1;
+  if (cuenta('\t') > 0) return '\t';
+  return cuenta(';') > cuenta(',') ? ';' : ',';
+}
+
+export function parseCsv(texto: string, sep = separador(texto)): string[][] {
   const filas: string[][] = [];
   let fila: string[] = [], celda = '', comillas = false;
   const t = texto.replace(/^﻿/, '');
@@ -14,7 +22,7 @@ export function parseCsv(texto: string): string[][] {
       else if (ch === '"') comillas = false;
       else celda += ch;
     } else if (ch === '"') comillas = true;
-    else if (ch === ',') { fila.push(celda); celda = ''; }
+    else if (ch === sep) { fila.push(celda); celda = ''; }
     else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && t[i + 1] === '\n') i++;
       fila.push(celda); filas.push(fila); fila = []; celda = '';

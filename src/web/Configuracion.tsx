@@ -115,11 +115,18 @@ function Importar() {
   const [filas, setFilas] = useState<FilaConfig[] | null>(null);
   const [estado, setEstado] = useState<{ t: string; error?: boolean } | null>(null);
 
-  const leer = async (file: File | undefined) => {
+  const [pegado, setPegado] = useState('');
+  const procesar = (texto: string) => {
     setEstado(null); setFilas(null);
-    if (!file) return;
-    try { setFilas(leerConfig(await file.text())); } catch (e: any) { setEstado({ t: e.message, error: true }); }
+    if (!texto.trim()) return;
+    if (texto.startsWith('PK')) { setEstado({ t: 'Ese archivo es un Excel (.xlsx). Descargalo como CSV, o copiá las celdas y pegalas en el recuadro.', error: true }); return; }
+    try {
+      const f = leerConfig(texto);
+      if (!f.length) setEstado({ t: 'No encontré filas. La primera fila tiene que tener los títulos (Cliente, ID cuenta publicitaria, …).', error: true });
+      else setFilas(f);
+    } catch (e: any) { setEstado({ t: e.message, error: true }); }
   };
+  const leer = async (file: File | undefined) => { if (file) procesar(await file.text()); };
 
   const ok = (filas || []).filter((f) => metaPorId.has(f.ad_account_id));
   const faltan = (filas || []).filter((f) => !metaPorId.has(f.ad_account_id));
@@ -146,7 +153,7 @@ function Importar() {
         if (e2) throw e2;
       }
       setEstado({ t: `Importado: ${grupos.size} clientes y ${ok.length} cuentas.` });
-      setFilas(null);
+      setFilas(null); setPegado('');
       await recargar();
     } catch (e: any) { setEstado({ t: e.message, error: true }); }
   };
@@ -154,8 +161,11 @@ function Importar() {
   return (
     <section className="panel">
       <h3>Importar desde el Sheet</h3>
-      <p className="nota">Descargá el Sheet "Configuración de clientes" como CSV y subilo acá. Actualiza lo que ya existe, no duplica. Columna opcional <b>AM</b> con el email del Account Manager.</p>
-      <input type="file" accept=".csv,text/csv" onChange={(e) => leer(e.target.files?.[0])} />
+      <p className="nota">Actualiza lo que ya existe, no duplica. Columna opcional <b>AM</b> con el email del Account Manager.</p>
+      <p><b>Opción 1 · Pegar:</b> en el Sheet, seleccioná todo (<kbd>Cmd/Ctrl + A</kbd>), copiá (<kbd>Cmd/Ctrl + C</kbd>) y pegá acá, títulos incluidos.</p>
+      <textarea className="pegar" rows={5} value={pegado} placeholder="Pegá acá las celdas copiadas del Sheet" onChange={(e) => { setPegado(e.target.value); procesar(e.target.value); }} />
+      <p><b>Opción 2 · Archivo:</b> Archivo → Descargar → CSV en el Sheet, y elegilo acá.</p>
+      <input type="file" onChange={(e) => leer(e.target.files?.[0])} />
       {estado && <Aviso tipo={estado.error ? 'error' : 'info'}>{estado.t}</Aviso>}
       {filas && (
         <>
