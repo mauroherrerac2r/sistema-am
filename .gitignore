@@ -4,3 +4,5 @@ dist
 .netlify
 *.csv
 respaldo-sistema-am.*
+
+!docs/plantilla-clientes.csv
