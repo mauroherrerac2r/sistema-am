@@ -1,8 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { Login } from './Login';
-import { Estado } from './Estado';
+import { Inicio } from './Inicio';
+import { Analisis } from './Analisis';
+import { Configuracion } from './Configuracion';
+import { Sistema } from './Sistema';
+import { cargarConfig } from './datos';
+import { Contexto, Ctx } from './contexto';
+
+const PAGINAS = [
+  { id: 'inicio', titulo: 'Operación' },
+  { id: 'analisis', titulo: 'Análisis puntual' },
+  { id: 'config', titulo: 'Clientes' },
+  { id: 'sistema', titulo: 'Sistema' },
+];
+
+const leerLS = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+const guardarLS = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
 
 export function App() {
   const [sesion, setSesion] = useState<Session | null | undefined>(undefined);
@@ -13,15 +28,62 @@ export function App() {
   }, []);
   if (sesion === undefined) return null;
   if (!sesion) return <Login />;
+  return <Interna sesion={sesion} />;
+}
+
+function Interna({ sesion }: { sesion: Session }) {
+  const [base, setBase] = useState<Awaited<ReturnType<typeof cargarConfig>> | null>(null);
+  const [error, setError] = useState('');
+  const [pagina, setPagina] = useState(() => location.hash.replace('#', '') || 'inicio');
+  const [filtro, setFiltro] = useState(() => leerLS('filtroAM') || 'mios');
+
+  const recargar = useCallback(async () => {
+    try { setBase(await cargarConfig()); setError(''); } catch (e: any) { setError(e.message); }
+  }, []);
+  useEffect(() => { recargar(); }, [recargar]);
+  useEffect(() => {
+    const f = () => setPagina(location.hash.replace('#', '') || 'inicio');
+    window.addEventListener('hashchange', f);
+    return () => window.removeEventListener('hashchange', f);
+  }, []);
+
+  const ctx: Ctx | null = useMemo(() => {
+    if (!base) return null;
+    const yo = base.perfiles.find((p) => p.id === sesion.user.id);
+    if (!yo) return null;
+    const tieneMios = base.clientes.some((c) => c.am_id === yo.id);
+    const f = filtro === 'mios' && !tieneMios ? 'todos' : filtro;
+    const visibles = base.clientes.filter((c) => c.activo && (f === 'todos' || c.am_id === (f === 'mios' ? yo.id : f)));
+    return { sesion, yo, ...base, visibles, metaPorId: new Map(base.cuentasMeta.map((m) => [m.id, m])), recargar };
+  }, [base, filtro, sesion, recargar]);
+
+  if (error) return <div className="centro"><p className="mal">No se pudieron cargar los datos: {error}</p></div>;
+  if (!base) return <div className="centro muted">Cargando…</div>;
+  if (!ctx) return <div className="centro"><p>Tu usuario no tiene permisos en el sistema. Pedile a un admin que te habilite.</p><button className="btn" onClick={() => supabase.auth.signOut()}>Salir</button></div>;
+
+  const ams = ctx.perfiles.filter((p) => p.rol === 'am' || p.rol === 'admin');
   return (
-    <div className="app">
-      <header className="barra">
-        <strong>Sistema AM</strong>
-        <span className="sp" />
-        <span className="muted">{sesion.user.email}</span>
-        <button className="btn" onClick={() => supabase.auth.signOut()}>Salir</button>
-      </header>
-      <main><Estado sesion={sesion} /></main>
-    </div>
+    <Contexto.Provider value={ctx}>
+      <div className="app">
+        <header className="barra-sup">
+          <strong className="marca">Sistema AM</strong>
+          <nav className="nav">
+            {PAGINAS.filter((p) => p.id !== 'sistema' || ctx.yo.rol === 'admin').map((p) => (
+              <a key={p.id} href={`#${p.id}`} className={pagina === p.id ? 'on' : ''}>{p.titulo}</a>
+            ))}
+          </nav>
+          <span className="sp" />
+          <select className="sel" value={filtro} aria-label="Clientes a mostrar" onChange={(e) => { setFiltro(e.target.value); guardarLS('filtroAM', e.target.value); }}>
+            <option value="mios">Mis clientes</option>
+            <option value="todos">Todos los clientes</option>
+            {ams.filter((p) => p.id !== ctx.yo.id).map((p) => <option key={p.id} value={p.id}>De {p.nombre || p.email}</option>)}
+          </select>
+          <button className="btn" onClick={() => supabase.auth.signOut()}>Salir</button>
+        </header>
+        <main>
+          {pagina === 'analisis' ? <Analisis /> : pagina === 'config' ? <Configuracion /> : pagina === 'sistema' && ctx.yo.rol === 'admin' ? <Sistema /> : <Inicio />}
+        </main>
+      </div>
+    </Contexto.Provider>
   );
 }

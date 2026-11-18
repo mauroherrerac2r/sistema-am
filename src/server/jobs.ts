@@ -2,7 +2,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { descifrar } from './crypto.js';
 import { MetaClient, MetaError } from './meta/client.js';
-import { cuentasDelToken, insightsCuenta, estructuraCuenta, fechaEnZona, enParalelo, identidad } from './meta/sync.js';
+import { cuentasDelToken, insightsCuenta, estructuraCuenta, frecuencia7d, fechaEnZona, enParalelo, identidad } from './meta/sync.js';
 import { upsertLotes } from './db.js';
 
 export type TipoSync = 'cuentas' | 'historico' | 'hoy';
@@ -88,6 +88,8 @@ export async function syncInsights(db: SupabaseClient, tipo: 'historico' | 'hoy'
       await upsertLotes(db, 'campaigns', e.campaigns.map((x) => ({ ...x, actualizado_en: ahora })), 'id');
       await upsertLotes(db, 'adsets', e.adsets.map((x) => ({ ...x, actualizado_en: ahora })), 'id');
       await upsertLotes(db, 'ads', e.ads.map((x) => ({ ...x, actualizado_en: ahora })), 'id');
+      const f7 = await frecuencia7d(meta, c.id, { since: fechaEnZona(c.zona_horaria, -7), until: fechaEnZona(c.zona_horaria, -1) });
+      await upsertLotes(db, 'frecuencia_7d', f7.map((x) => ({ ...x, actualizado_en: ahora })), 'ad_id');
     }
     return filas.length;
   });

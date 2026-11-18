@@ -44,7 +44,7 @@ pedidos = evento de mensajería "pedido creado".
 ### Fase 0 · Conector propio ✅ (este entregable)
 Base de datos, carga de BMs, importación del Sheet, sincronización programada, pantalla de estado.
 
-### Fase 1 · Táctico AM
+### Fase 1 · Táctico AM ✅
 Réplica mejorada del panel actual, leyendo de la base.
 - Inicio: KPIs de cartera (inversión y leads hoy vs ayer, clientes en crítico/atención, cuentas sin entrega).
 - Operación del día: ritmo vs presupuesto proporcional a la hora, CPL vs objetivo/máximo, estado y motivo.
