@@ -136,3 +136,5 @@ td.acciones { display: flex; gap: 6px; }
   .kpi .v { font-size: 24px; } .kv2 .v { font-size: 22px; }
   .barra-sup { gap: 8px; }
 }
+textarea.pegar { width: 100%; font: 12px/1.4 ui-monospace, Menlo, monospace; padding: 8px; border: 1px solid var(--linea); border-radius: 8px; background: var(--bg); color: var(--fg); resize: vertical; }
+kbd { font: 11px ui-monospace, Menlo, monospace; padding: 1px 5px; border: 1px solid var(--linea); border-radius: 4px; background: var(--bg); }

@@ -125,3 +125,16 @@ describe('CSV real del equipo', () => {
     expect(f[0]).toMatchObject({ sede: null, ad_account_id: '2018410715754595', presupuesto_semanal: 37100, cpl_maximo: 15, canales: ['WhatsApp'] });
   });
 });
+
+describe('formatos de importación', () => {
+  const enc = ['Cliente', 'Sede', 'Cuenta publicitaria', 'ID cuenta publicitaria', 'Activa', 'Moneda', 'Presupuesto mensual', 'Presupuesto semanal', 'CPL objetivo', 'CPL máximo tolerable', 'Canal publicitario', 'Notas', 'AM'];
+  const fila = ['NEW SUNRISE GROUP', 'Benavides', 'Benavides 1', 'act_449635846641860', 'Sí', 'USD', '800', '200', '2', '2,8', 'Messenger', '', 'mauro@picallex.com'];
+  it('pegado desde Google Sheets (tabs)', () => {
+    const f = leerConfig(enc.join('\t') + '\n' + fila.join('\t'));
+    expect(f[0]).toMatchObject({ ad_account_id: '449635846641860', cpl_maximo: 2.8, presupuesto_semanal: 200, canales: ['Messenger'] });
+  });
+  it('CSV de Excel en español (punto y coma)', () => {
+    const f = leerConfig(enc.join(';') + '\r\n' + fila.join(';'));
+    expect(f[0]).toMatchObject({ sede: 'Benavides', cpl_objetivo: 2, cpl_maximo: 2.8 });
+  });
+});
