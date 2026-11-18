@@ -1,8 +1,9 @@
+import { urlBase } from '../shared/url.js';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export function dbServidor(): SupabaseClient {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = urlBase(process.env.SUPABASE_URL);
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) throw new Error('Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY');
   return createClient(url, key, { auth: { persistSession: false } });
 }

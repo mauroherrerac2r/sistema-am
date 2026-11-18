@@ -110,3 +110,11 @@ describe('CSV del Sheet', () => {
     expect(canales('Instagram Direct')).toEqual(['Instagram']);
   });
 });
+
+import { urlBase } from '../src/shared/url';
+describe('URL de Supabase', () => {
+  it('limpia ruta, barra final y espacios', () => {
+    expect(urlBase(' https://abc.supabase.co/rest/v1/ ')).toBe('https://abc.supabase.co');
+    expect(urlBase('https://abc.supabase.co/')).toBe('https://abc.supabase.co');
+  });
+});
