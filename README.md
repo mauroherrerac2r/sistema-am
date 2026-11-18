@@ -14,9 +14,9 @@ Especificación completa y fases: [`docs/ESPECIFICACION.md`](docs/ESPECIFICACION
 
 ### 1. Supabase
 1. Crear un proyecto en supabase.com (región São Paulo).
-2. SQL Editor → pegar y correr `supabase/migrations/0001_init.sql` y después `0002_fase1.sql` (en ese orden).
+2. SQL Editor → pegar y correr `supabase/instalar.sql` (incluye las dos migraciones).
 3. Authentication → Sign In / Providers → Email: **desactivar "Allow new users to sign up"**. Solo entra quien invitás.
-4. Authentication → Users → **Invite user** para cada AM (Mauro, Nico).
+4. Authentication → Users → **Add user → Create new user** para cada AM (email + contraseña, con **Auto Confirm User** marcado).
 5. Hacer admin a quien administra el sistema (SQL Editor):
    ```sql
    update profiles set rol = 'admin', nombre = 'Mauro' where email = 'EMAIL_DE_MAURO';
@@ -27,8 +27,8 @@ Especificación completa y fases: [`docs/ESPECIFICACION.md`](docs/ESPECIFICACION
 ### 2. Variables
 Copiar `.env.example` y completar los valores (se cargan en Netlify en el paso 3):
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, y las mismas URL y anon key como `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-- `TOKEN_ENCRYPTION_KEY`: 32 bytes al azar en base64. Se genera con `npm run clave`, o en
-  https://generate-random.org/encryption-key-generator (256 bit, base64). **Guardarla en un lugar seguro: si se pierde, hay que volver a cargar los tokens.**
+- `TOKEN_ENCRYPTION_KEY`: 32 bytes al azar en base64. Se genera en el SQL Editor de Supabase con
+  `select encode(gen_random_bytes(32), 'base64');` (o con `npm run clave`). **Guardarla en un lugar seguro: si se pierde, hay que volver a cargar los tokens.**
 - `SYNC_SECRET`: cualquier texto largo al azar.
 
 **La `service_role key`, la `TOKEN_ENCRYPTION_KEY` y los tokens nunca van al repositorio.**
