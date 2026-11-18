@@ -118,3 +118,10 @@ describe('URL de Supabase', () => {
     expect(urlBase('https://abc.supabase.co/')).toBe('https://abc.supabase.co');
   });
 });
+
+describe('CSV real del equipo', () => {
+  it('Sede "No" queda vacía y act_ se limpia', () => {
+    const f = leerConfig('Cliente,Sede,Cuenta publicitaria,ID cuenta publicitaria,Activa,Moneda,Presupuesto mensual,Presupuesto semanal,CPL objetivo,CPL máximo tolerable,Canal publicitario,Notas,AM\nSHAREWOODS / INOVA,No,Green Marvel,act_2018410715754595,Sí,MXN,148400,37100,13,15,WhatsApp,,mauro@picallex.com\n');
+    expect(f[0]).toMatchObject({ sede: null, ad_account_id: '2018410715754595', presupuesto_semanal: 37100, cpl_maximo: 15, canales: ['WhatsApp'] });
+  });
+});

@@ -48,6 +48,9 @@ export function canales(s: string): string[] {
   return out;
 }
 
+/** "No", "-", "N/A" o vacío = sin sede. */
+export const sinValor = (s: string) => /^(|no|-|–|n\/a|na|ninguna)$/i.test(s.trim());
+
 export interface FilaConfig {
   cliente: string; slug: string; sede: string | null; cuenta: string; ad_account_id: string;
   activa: boolean; moneda: string | null; presupuesto_mensual: number | null; presupuesto_semanal: number | null;
@@ -68,7 +71,7 @@ export function leerConfig(texto: string): FilaConfig[] {
   return datos.filter((f) => v(f, c.cliente) && v(f, c.id)).map((f) => {
     const ps = numero(v(f, c.ps)), pm = numero(v(f, c.pm));
     return {
-      cliente: v(f, c.cliente), slug: slug(v(f, c.cliente)), sede: v(f, c.sede) || null, cuenta: v(f, c.cuenta),
+      cliente: v(f, c.cliente), slug: slug(v(f, c.cliente)), sede: sinValor(v(f, c.sede)) ? null : v(f, c.sede), cuenta: v(f, c.cuenta),
       ad_account_id: v(f, c.id).replace(/^act_/, ''), activa: v(f, c.activa).toLowerCase().startsWith('s'),
       moneda: v(f, c.moneda) || null, presupuesto_mensual: pm,
       presupuesto_semanal: ps ?? (pm != null ? Math.round((pm / 30.4) * 7 * 100) / 100 : null),

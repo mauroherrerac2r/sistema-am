@@ -96,10 +96,10 @@ export function Inicio() {
       </>}>
         <p className="nota">Ritmo: inversión contra el presupuesto diario (semanal ÷ 7) proporcional a la hora de cada cuenta. El CPL del día alerta desde 3 resultados.</p>
         <Tabla>
-          <thead><tr><th>Cliente</th><th>Cuenta</th><th className="d">Hora</th><th className="d">Inversión</th><th className="d">Presup. diario</th><th className="d">Ritmo</th><th className="d">Resultados</th><th className="d">CPL</th><th className="d">Obj. / máx.</th><th className="d">Pedidos</th><th>Estado</th><th>Motivo</th></tr></thead>
+          <thead><tr><th>Cliente</th><th>Cuenta</th><th>Sede</th><th className="d">Hora</th><th className="d">Inversión</th><th className="d">Presup. diario</th><th className="d">Ritmo</th><th className="d">Resultados</th><th className="d">CPL</th><th className="d">Obj. / máx.</th><th className="d">Pedidos</th><th>Estado</th><th>Motivo</th></tr></thead>
           <tbody>{hoy.map(({ cfg, cliente, nombre, moneda, zona, ev }) => (
             <tr key={cfg.ad_account_id} className={`r-${ev.nivel}`}>
-              <td>{cliente}</td><td>{nombre}</td>
+              <td>{cliente}</td><td>{nombre}</td><td className="muted">{cfg.sede ?? '–'}</td>
               <td className="d">{ayer ? 'Día completo' : `${hhmm(ev.hora)} · ${(zona || 'UTC').split('/').pop()!.replace('_', ' ')}`}</td>
               <td className="d">{dinero(ev.inversion, moneda)}</td><td className="d">{dinero(ev.presupuesto_diario, moneda)}</td>
               <td className="d">{ev.ritmo_pct == null || ev.nivel === 'inactiva' ? '–' : <span className="ritmo"><Barra valor={ev.ritmo_pct} tope={140} tono={ritmoOk(ev.ritmo_pct, ayer) ? 'bien' : 'aviso'} /><span className={ritmoOk(ev.ritmo_pct, ayer) ? 'bien' : 'aviso'}>{pct(ev.ritmo_pct)}</span></span>}</td>

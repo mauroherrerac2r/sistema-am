@@ -22,5 +22,5 @@ export const useApp = () => {
   return c;
 };
 
-/** Nombre visible de una cuenta: sede si existe, si no el nombre de Meta. */
-export const nombreCuenta = (cfg: CfgCuenta, meta?: CuentaMeta) => cfg.sede || meta?.nombre || cfg.ad_account_id;
+/** Nombre visible de una cuenta: el de Meta (único); la sede se muestra aparte porque puede repetirse. */
+export const nombreCuenta = (cfg: CfgCuenta, meta?: CuentaMeta) => meta?.nombre || cfg.sede || cfg.ad_account_id;

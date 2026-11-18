@@ -49,10 +49,10 @@ export function Detalle({ cliente, dias }: { cliente: ClienteVista; dias: Dia[] 
 
       <h3>Cuentas</h3>
       <Tabla>
-        <thead><tr><th>Cuenta</th><th>Canales</th><th>Estado en Meta</th><th className="d">Inversión</th><th className="d">Presup. semanal</th><th className="d">Pacing</th><th className="d">Resultados</th><th className="d">CPL</th><th className="d">Obj. / máx.</th><th className="d">CPL vs previa</th><th className="d">Pedidos</th><th className="d">CTR</th><th className="d">CPM</th><th className="d">Días sin entrega</th><th>Estado</th><th>Motivo</th></tr></thead>
+        <thead><tr><th>Cuenta</th><th>Sede</th><th>Canales</th><th>Estado en Meta</th><th className="d">Inversión</th><th className="d">Presup. semanal</th><th className="d">Pacing</th><th className="d">Resultados</th><th className="d">CPL</th><th className="d">Obj. / máx.</th><th className="d">CPL vs previa</th><th className="d">Pedidos</th><th className="d">CTR</th><th className="d">CPM</th><th className="d">Días sin entrega</th><th>Estado</th><th>Motivo</th></tr></thead>
         <tbody>{cliente.cuentas.map(({ cfg, nombre: n, sem: s, moneda }) => (
           <tr key={cfg.ad_account_id} className={`r-${s.nivel}`}>
-            <td>{n}</td><td>{cfg.canales.join(', ') || '–'}</td><td className={s.estado_meta === 'Activa' ? '' : 'mal'}>{s.estado_meta}</td>
+            <td>{n}</td><td>{cfg.sede ?? '–'}</td><td>{cfg.canales.join(', ') || '–'}</td><td className={s.estado_meta === 'Activa' ? '' : 'mal'}>{s.estado_meta}</td>
             <td className="d">{dinero(s.inv_7d, moneda)}</td><td className="d">{dinero0(cfg.presupuesto_semanal, moneda)}</td>
             <td className={`d ${s.nivel === 'inactiva' ? '' : pacingTono(s.pacing_pct)}`}>{pct(s.pacing_pct)}</td>
             <td className="d">{entero(s.resultados_7d)}</td><td className={`d ${cplTono(s.cpr_7d, cfg.cpl_objetivo, cfg.cpl_maximo)}`}>{dinero(s.cpr_7d, moneda)}</td>
