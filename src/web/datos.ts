@@ -2,6 +2,7 @@
 import { supabase } from './supabase';
 import type { CfgCuenta, CuentaMeta, Dia, FilaAnuncioCruda } from './reglas';
 import { canalAnuncio } from './reglas';
+import type { VentaAnuncio } from './ventas';
 
 export interface Perfil { id: string; email: string; nombre: string | null; rol: 'admin' | 'am' | 'pm' }
 export interface Cliente { id: string; slug: string; nombre: string; am_id: string | null; activo: boolean }
@@ -119,4 +120,50 @@ export async function frecuencias7d(cuentas: string[]): Promise<Map<string, { al
   if (!cuentas.length) return new Map();
   const rows = await todas<any>((a, b) => supabase.from('frecuencia_7d').select('ad_id,alcance,frecuencia').in('ad_account_id', cuentas).range(a, b));
   return new Map(rows.map((r) => [r.ad_id, { alcance: num(r.alcance), frecuencia: num(r.frecuencia) }]));
+}
+
+// ---------------- Fase 2: ventas del CRM ----------------
+
+export interface Carga { id: string; client_id: string; desde: string; hasta: string; fuente: string; nombre: string | null; filas: number | null; creado_en: string; creado_por: string | null }
+
+export async function listarCargas(clientes: string[]): Promise<Carga[]> {
+  if (!clientes.length) return [];
+  const { data, error } = await supabase.from('ventas_cargas').select('*').in('client_id', clientes).order('creado_en', { ascending: false }).limit(200);
+  if (error) throw new Error(error.message);
+  return data as Carga[];
+}
+
+export async function guardarCarga(c: { client_id: string; desde: string; hasta: string; nombre: string | null; fuente: string }, filas: VentaAnuncio[]): Promise<string> {
+  const { data, error } = await supabase.from('ventas_cargas').insert({ ...c, filas: filas.length }).select('id').single();
+  if (error) throw new Error(error.message);
+  for (let i = 0; i < filas.length; i += 500) {
+    const { error: e2 } = await supabase.from('ventas_anuncio').insert(filas.slice(i, i + 500).map((f) => ({ ...f, carga_id: data.id })));
+    if (e2) { await supabase.from('ventas_cargas').delete().eq('id', data.id); throw new Error(e2.message); }
+  }
+  return data.id;
+}
+
+export async function ventasDeCarga(id: string): Promise<VentaAnuncio[]> {
+  const rows = await todas<any>((a, b) => supabase.from('ventas_anuncio').select('*').eq('carga_id', id).range(a, b));
+  return rows.map((r) => ({ ad_id: r.ad_id, sede_crm: r.sede_crm, pre_leads: r.pre_leads, leads: r.leads, ordenes: r.ordenes, monto: Number(r.monto), por_cobrar: Number(r.por_cobrar), cobrado: Number(r.cobrado), enlaces: r.enlaces }));
+}
+
+export async function borrarCarga(id: string) {
+  const { error } = await supabase.from('ventas_cargas').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export interface Analisis { id: string; tipo: 'cliente' | 'paid'; estado: 'generando' | 'listo' | 'error'; contenido: string | null; error: string | null; contexto: string | null; modelo: string | null; creado_en: string }
+
+export async function analisisDeCarga(id: string): Promise<Analisis[]> {
+  const { data, error } = await supabase.from('analisis_ia').select('id,tipo,estado,contenido,error,contexto,modelo,creado_en').eq('carga_id', id).order('creado_en', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data as Analisis[];
+}
+
+/** Primer día con datos de Meta guardados para estas cuentas. */
+export async function primerDiaMeta(cuentas: string[]): Promise<string | null> {
+  if (!cuentas.length) return null;
+  const { data } = await supabase.from('insights_daily').select('fecha').eq('nivel', 'account').in('ad_account_id', cuentas).order('fecha').limit(1).maybeSingle();
+  return (data as any)?.fecha ?? null;
 }

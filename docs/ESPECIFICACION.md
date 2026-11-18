@@ -60,7 +60,7 @@ Reglas de estado (mismas del panel actual):
 - **Atención:** CPL entre objetivo y máximo, pacing fuera de 90–110 %, 2+ días sin entrega.
 - El CPL del día solo alerta desde 3 resultados.
 
-### Fase 2 · Estratégico AM
+### Fase 2 · Estratégico AM ✅ (carga PicallEx por anuncio + análisis IA)
 1. **Carga** de exportaciones del CRM: CSV/Excel (PicallEx u otro) o captura/PDF.
 2. **Mapeo de columnas** por cliente, que se recuerda: fecha, sede, producto, origen/campaña, estado, monto.
    Plantilla predefinida para PicallEx; otros CRM se mapean una vez.

@@ -138,3 +138,15 @@ td.acciones { display: flex; gap: 6px; }
 }
 textarea.pegar { width: 100%; font: 12px/1.4 ui-monospace, Menlo, monospace; padding: 8px; border: 1px solid var(--linea); border-radius: 8px; background: var(--bg); color: var(--fg); resize: vertical; }
 kbd { font: 11px ui-monospace, Menlo, monospace; padding: 1px 5px; border: 1px solid var(--linea); border-radius: 4px; background: var(--bg); }
+
+/* Fase 2 · Ventas y ROAS */
+.pila-chica { display: flex; flex-direction: column; gap: 10px; }
+.hallazgos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hallazgos li { padding: 8px 12px; border-radius: 8px; background: var(--panel); border: 1px solid var(--linea); border-left-width: 4px; }
+.hallazgos li.bien { border-left-color: var(--ok); } .hallazgos li.aviso { border-left-color: var(--aviso); }
+.hallazgos li.mal { border-left-color: var(--mal); } .hallazgos li.info { border-left-color: var(--serie); }
+.analisis h3 { margin: 0; }
+.markdown { max-width: 95ch; line-height: 1.6; }
+.markdown h3 { font-size: 16px; margin: 18px 0 6px; } .markdown h4 { font-size: 14px; margin: 14px 0 4px; }
+.markdown p { margin: 6px 0; } .markdown ul, .markdown ol { margin: 6px 0; padding-left: 22px; }
+.markdown .tabla { margin: 8px 0; }

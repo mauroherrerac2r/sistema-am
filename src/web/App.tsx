@@ -6,12 +6,14 @@ import { Inicio } from './Inicio';
 import { Analisis } from './Analisis';
 import { Configuracion } from './Configuracion';
 import { Sistema } from './Sistema';
+import { Ventas } from './Ventas';
 import { cargarConfig } from './datos';
 import { Contexto, Ctx } from './contexto';
 
 const PAGINAS = [
   { id: 'inicio', titulo: 'Operación' },
   { id: 'analisis', titulo: 'Análisis puntual' },
+  { id: 'ventas', titulo: 'Ventas y ROAS' },
   { id: 'config', titulo: 'Clientes' },
   { id: 'sistema', titulo: 'Sistema' },
 ];
@@ -81,7 +83,7 @@ function Interna({ sesion }: { sesion: Session }) {
           <button className="btn" onClick={() => supabase.auth.signOut()}>Salir</button>
         </header>
         <main>
-          {pagina === 'analisis' ? <Analisis /> : pagina === 'config' ? <Configuracion /> : pagina === 'sistema' && ctx.yo.rol === 'admin' ? <Sistema /> : <Inicio />}
+          {pagina === 'analisis' ? <Analisis /> : pagina === 'ventas' ? <Ventas /> : pagina === 'config' ? <Configuracion /> : pagina === 'sistema' && ctx.yo.rol === 'admin' ? <Sistema /> : <Inicio />}
         </main>
       </div>
     </Contexto.Provider>

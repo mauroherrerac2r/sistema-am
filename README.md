@@ -32,6 +32,8 @@ Copiar `.env.example` y completar los valores (se cargan en Netlify en el paso 3
 - `TOKEN_ENCRYPTION_KEY`: 32 bytes al azar en base64. Se genera en el SQL Editor de Supabase con
   `select encode(gen_random_bytes(32), 'base64');` (o con `npm run clave`). **Guardarla en un lugar seguro: si se pierde, hay que volver a cargar los tokens.**
 - `SYNC_SECRET`: cualquier texto largo al azar.
+- `ANTHROPIC_API_KEY`: clave de console.anthropic.com para el análisis con IA (Fase 2). Marcarla como secreta.
+- `ANTHROPIC_MODEL` (opcional): modelo del análisis. Por defecto `claude-opus-5-5`.
 
 **La `service_role key`, la `TOKEN_ENCRYPTION_KEY` y los tokens nunca van al repositorio.**
 

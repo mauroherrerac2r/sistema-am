@@ -14,6 +14,7 @@
     "config:importar": "tsx --env-file=.env scripts/importar-config.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
     "@supabase/supabase-js": "^2.119.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
