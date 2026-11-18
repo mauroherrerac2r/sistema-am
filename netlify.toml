@@ -2,6 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  NODE_VERSION = "22"
+  # La URL y la Publishable key de Supabase son públicas por diseño (viajan al navegador):
+  # el escáner de secretos de Netlify no debe bloquear el deploy por encontrarlas en la app.
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,VITE_SUPABASE_URL,SUPABASE_ANON_KEY,VITE_SUPABASE_ANON_KEY,META_API_VERSION"
+
 [functions]
   node_bundler = "esbuild"
 
