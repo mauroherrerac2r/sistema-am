@@ -22,11 +22,13 @@ Especificación completa y fases: [`docs/ESPECIFICACION.md`](docs/ESPECIFICACION
    update profiles set rol = 'admin', nombre = 'Mauro' where email = 'EMAIL_DE_MAURO';
    update profiles set nombre = 'Nico' where email = 'EMAIL_DE_NICO';
    ```
-6. Project Settings → API: copiar `URL`, `anon key` y `service_role key`.
+6. Project Settings → API Keys: copiar la **Publishable key** (`sb_publishable_…`) y la **Secret key** (`sb_secret_…`). No usar las legacy (se retiran en 2027). La URL está en Project Settings → Data API.
 
 ### 2. Variables
 Copiar `.env.example` y completar los valores (se cargan en Netlify en el paso 3):
-- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, y las mismas URL y anon key como `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+- `SUPABASE_URL` y `VITE_SUPABASE_URL`: la Project URL.
+- `SUPABASE_ANON_KEY` y `VITE_SUPABASE_ANON_KEY`: la Publishable key.
+- `SUPABASE_SERVICE_ROLE_KEY`: la Secret key.
 - `TOKEN_ENCRYPTION_KEY`: 32 bytes al azar en base64. Se genera en el SQL Editor de Supabase con
   `select encode(gen_random_bytes(32), 'base64');` (o con `npm run clave`). **Guardarla en un lugar seguro: si se pierde, hay que volver a cargar los tokens.**
 - `SYNC_SECRET`: cualquier texto largo al azar.
