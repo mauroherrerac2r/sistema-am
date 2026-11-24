@@ -13,7 +13,8 @@ Reglas:
 - Los montos están en la moneda indicada en "moneda". Escribí números en formato es-AR (1.234,56).
 - "roas" = monto vendido / inversión. "roas_cobrado" = monto cobrado / inversión. "cierre_pct" = órdenes / leads del CRM.
 - Tené en cuenta las limitaciones que aparecen en "hallazgos" (ventas sin cargar, montos por cobrar, anuncios fuera de las cuentas) y nombralas cuando cambien la lectura.
-- Si hay "contexto_am", usalo para orientar el análisis.
+- Antes de los datos recibís el CONTEXTO que cargó el Account Manager: el del negocio (estable) y el del período. Es tu punto de partida: usalo para interpretar los números (qué cuenta como venta, ciclos de venta, cambios operativos, prioridades) y para decidir qué destacar. Si los datos contradicen el contexto, señalalo con respeto.
+- Si hay "roas_objetivo", evaluá cada sede, campaña y anuncio contra ese objetivo (no solo contra ROAS 1).
 - Escribí en español neutro, directo, sin relleno ni frases motivacionales. Markdown simple: títulos con ##, viñetas con -, negritas con **. Podés usar tablas markdown chicas.`;
 
 const PROMPTS: Record<TipoAnalisis, string> = {
@@ -46,9 +47,22 @@ Extensión: entre 350 y 650 palabras.`,
 
 export interface ResultadoIA { texto: string; modelo: string; tokens_entrada: number; tokens_salida: number }
 
-export async function generarAnalisis(tipo: TipoAnalisis, entrada: unknown, contexto: string | null): Promise<ResultadoIA> {
+/** Arma el pedido con el contexto PRIMERO y los números después. */
+export function armarPedido(entrada: Record<string, unknown>, contextoExtra: string | null): string {
+  const { contexto_negocio, contexto_periodo, ...datos } = entrada as { contexto_negocio?: string | null; contexto_periodo?: string | null };
+  const periodo = [contexto_periodo, contextoExtra].filter(Boolean).join('\n');
+  return [
+    '# Contexto cargado por el Account Manager (leelo primero)',
+    `## Del negocio\n${contexto_negocio?.trim() || 'Sin contexto del negocio cargado.'}`,
+    `## Del período\n${periodo.trim() || 'Sin contexto del período cargado.'}`,
+    '# Datos del período',
+    JSON.stringify(datos),
+    'Con ese contexto en mente, escribí el análisis.',
+  ].join('\n\n');
+}
+
+export async function generarAnalisis(tipo: TipoAnalisis, entrada: Record<string, unknown>, contexto: string | null): Promise<ResultadoIA> {
   const client = new Anthropic(); // usa ANTHROPIC_API_KEY
-  const datos = JSON.stringify(contexto ? { ...(entrada as object), contexto_am: contexto } : entrada);
   const stream = client.beta.messages.stream({
     model: MODELO,
     max_tokens: 16000,
@@ -57,7 +71,7 @@ export async function generarAnalisis(tipo: TipoAnalisis, entrada: unknown, cont
     thinking: { type: 'adaptive' },
     output_config: { effort: 'high' },
     system: PROMPTS[tipo],
-    messages: [{ role: 'user', content: `Datos del período:\n\n${datos}\n\nEscribí el análisis.` }],
+    messages: [{ role: 'user', content: armarPedido(entrada, contexto) }],
   });
   const msg = await stream.finalMessage();
   if (msg.stop_reason === 'refusal') throw new Error('El modelo no generó el análisis (rechazo de seguridad). Probá de nuevo o revisá el contexto cargado.');

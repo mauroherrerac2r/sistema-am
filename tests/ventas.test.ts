@@ -64,3 +64,16 @@ describe('cruce con Meta', () => {
     expect(textos).toMatch(/por cobrar/);
   });
 });
+
+import { armarPedido } from '../src/server/ia';
+describe('pedido a la IA', () => {
+  it('pone el contexto antes que los datos y no lo repite en el JSON', () => {
+    const p = armarPedido({ cliente: 'NSG', contexto_negocio: 'Inmobiliaria; la venta es la reserva.', contexto_periodo: 'Feriado el 10/11.', totales: { roas: 1.5 } }, null);
+    expect(p.indexOf('Inmobiliaria')).toBeLessThan(p.indexOf('"totales"'));
+    expect(p.indexOf('Feriado')).toBeLessThan(p.indexOf('# Datos del período'));
+    expect(p).not.toContain('"contexto_negocio"');
+  });
+  it('avisa cuando no hay contexto', () => {
+    expect(armarPedido({ totales: {} }, null)).toContain('Sin contexto del negocio cargado.');
+  });
+});

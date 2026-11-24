@@ -15,7 +15,7 @@ export default async (req: Request) => {
   if (json.length > 400_000) return new Response('Demasiados datos para un análisis: acotá el período.', { status: 400 });
   const db = dbServidor();
   const { data, error } = await db.from('analisis_ia').insert({
-    carga_id: b.carga_id, tipo: b.tipo, contexto: b.contexto ? String(b.contexto).slice(0, 2000) : null,
+    carga_id: b.carga_id, tipo: b.tipo, contexto: b.entrada?.contexto_periodo ? String(b.entrada.contexto_periodo).slice(0, 2000) : null,
     entrada: b.entrada, modelo: MODELO, creado_por: u.id,
   }).select('id').single();
   if (error) return new Response(error.message, { status: 500 });

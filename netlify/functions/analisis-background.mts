@@ -10,7 +10,7 @@ export default async (req: Request) => {
   const { data: a } = await db.from('analisis_ia').select('id,tipo,entrada,contexto,estado').eq('id', id).single();
   if (!a || a.estado !== 'generando') return new Response('Nada que hacer');
   try {
-    const r = await generarAnalisis(a.tipo, a.entrada, a.contexto);
+    const r = await generarAnalisis(a.tipo, a.entrada, null);
     await db.from('analisis_ia').update({ estado: 'listo', contenido: r.texto, modelo: r.modelo, tokens_entrada: r.tokens_entrada, tokens_salida: r.tokens_salida, terminado_en: new Date().toISOString() }).eq('id', id);
   } catch (e: any) {
     await db.from('analisis_ia').update({ estado: 'error', error: String(e?.message || e).slice(0, 1000), terminado_en: new Date().toISOString() }).eq('id', id);

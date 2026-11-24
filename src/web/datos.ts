@@ -5,7 +5,7 @@ import { canalAnuncio } from './reglas';
 import type { VentaAnuncio } from './ventas';
 
 export interface Perfil { id: string; email: string; nombre: string | null; rol: 'admin' | 'am' | 'pm' }
-export interface Cliente { id: string; slug: string; nombre: string; am_id: string | null; activo: boolean }
+export interface Cliente { id: string; slug: string; nombre: string; am_id: string | null; activo: boolean; contexto_ia: string | null; roas_objetivo: number | null }
 
 /** Supabase devuelve como máximo 1000 filas por pedido: se pagina. */
 async function todas<T>(armar: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: any }>): Promise<T[]> {
@@ -23,7 +23,7 @@ const num = (v: unknown) => (v == null ? null : Number(v));
 export async function cargarConfig() {
   const [perfiles, clientes, cfg, cuentas] = await Promise.all([
     supabase.from('profiles').select('id,email,nombre,rol').order('nombre'),
-    supabase.from('clients').select('id,slug,nombre,am_id,activo').order('nombre'),
+    supabase.from('clients').select('id,slug,nombre,am_id,activo,contexto_ia,roas_objetivo').order('nombre'),
     supabase.from('client_accounts').select('*'),
     todas<any>((a, b) => supabase.from('ad_accounts').select('id,nombre,moneda,zona_horaria,estado_cuenta,bm_id').order('nombre').range(a, b)),
   ]);
@@ -35,7 +35,7 @@ export async function cargarConfig() {
   }));
   return {
     perfiles: (perfiles.data || []) as Perfil[],
-    clientes: (clientes.data || []) as Cliente[],
+    clientes: ((clientes.data || []) as any[]).map((c) => ({ ...c, roas_objetivo: num(c.roas_objetivo) })) as Cliente[],
     cuentasCfg,
     cuentasMeta: cuentas as CuentaMeta[],
     presupuestoMensual: new Map((cfg.data || []).map((c: any) => [c.ad_account_id as string, num(c.presupuesto_mensual)])),
@@ -124,7 +124,7 @@ export async function frecuencias7d(cuentas: string[]): Promise<Map<string, { al
 
 // ---------------- Fase 2: ventas del CRM ----------------
 
-export interface Carga { id: string; client_id: string; desde: string; hasta: string; fuente: string; nombre: string | null; filas: number | null; creado_en: string; creado_por: string | null }
+export interface Carga { id: string; client_id: string; desde: string; hasta: string; fuente: string; nombre: string | null; contexto: string | null; filas: number | null; creado_en: string; creado_por: string | null }
 
 export async function listarCargas(clientes: string[]): Promise<Carga[]> {
   if (!clientes.length) return [];
@@ -133,7 +133,7 @@ export async function listarCargas(clientes: string[]): Promise<Carga[]> {
   return data as Carga[];
 }
 
-export async function guardarCarga(c: { client_id: string; desde: string; hasta: string; nombre: string | null; fuente: string }, filas: VentaAnuncio[]): Promise<string> {
+export async function guardarCarga(c: { client_id: string; desde: string; hasta: string; nombre: string | null; fuente: string; contexto: string | null }, filas: VentaAnuncio[]): Promise<string> {
   const { data, error } = await supabase.from('ventas_cargas').insert({ ...c, filas: filas.length }).select('id').single();
   if (error) throw new Error(error.message);
   for (let i = 0; i < filas.length; i += 500) {
@@ -166,4 +166,14 @@ export async function primerDiaMeta(cuentas: string[]): Promise<string | null> {
   if (!cuentas.length) return null;
   const { data } = await supabase.from('insights_daily').select('fecha').eq('nivel', 'account').in('ad_account_id', cuentas).order('fecha').limit(1).maybeSingle();
   return (data as any)?.fecha ?? null;
+}
+
+export async function guardarContextoCliente(id: string, contexto_ia: string | null, roas_objetivo: number | null) {
+  const { error } = await supabase.from('clients').update({ contexto_ia, roas_objetivo }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function guardarContextoCarga(id: string, contexto: string | null) {
+  const { error } = await supabase.from('ventas_cargas').update({ contexto }).eq('id', id);
+  if (error) throw new Error(error.message);
 }
