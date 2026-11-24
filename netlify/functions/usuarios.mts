@@ -2,6 +2,7 @@
 // Usa la Secret key de Supabase en el servidor; nunca llega al navegador.
 import { usuarioConRol } from '../../src/server/auth.js';
 import { dbServidor } from '../../src/server/db.js';
+import { randomBytes } from 'node:crypto';
 
 const ROLES = ['admin', 'am', 'pm'];
 const claveValida = (p: unknown) => typeof p === 'string' && p.length >= 10;
@@ -15,9 +16,11 @@ export default async (req: Request) => {
   if (req.method === 'POST') {
     const email = String(b.email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return new Response('Email inválido', { status: 400 });
-    if (!claveValida(b.password)) return new Response('La contraseña necesita al menos 10 caracteres', { status: 400 });
+    // Sin contraseña: entra con Google. Se le pone una al azar que nadie conoce.
+    const password = b.password ? String(b.password) : randomBytes(24).toString('base64url');
+    if (!claveValida(password)) return new Response('La contraseña necesita al menos 10 caracteres', { status: 400 });
     if (!ROLES.includes(b.rol)) return new Response('Rol inválido', { status: 400 });
-    const { data, error } = await db.auth.admin.createUser({ email, password: b.password, email_confirm: true });
+    const { data, error } = await db.auth.admin.createUser({ email, password, email_confirm: true });
     if (error) return new Response(error.message.includes('already') ? 'Ya existe un usuario con ese email' : error.message, { status: 400 });
     await db.from('profiles').upsert({ id: data.user.id, email, nombre: String(b.nombre || '').trim() || null, rol: b.rol });
     return Response.json({ id: data.user.id });

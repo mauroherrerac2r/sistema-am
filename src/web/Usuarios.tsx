@@ -27,12 +27,13 @@ export function AdminUsuarios() {
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
-    if (await api('POST', nuevo, `Usuario ${nuevo.email} creado. Pasale la contraseña por un canal privado: ${nuevo.password}`)) setNuevo({ email: '', nombre: '', rol: 'am', password: '' });
+    const ok = nuevo.password ? `Usuario ${nuevo.email} creado. Pasale la contraseña por un canal privado: ${nuevo.password}` : `Usuario ${nuevo.email} creado. Ya puede entrar con Google.`;
+    if (await api('POST', nuevo, ok)) setNuevo({ email: '', nombre: '', rol: 'am', password: '' });
   };
 
   return (
     <Seccion id="usuarios" titulo="Usuarios">
-      <p className="nota">Creá usuarios y poneles contraseña sin depender de emails. Las contraseñas no se pueden ver: solo se reemplazan por una nueva. Mínimo 10 caracteres.</p>
+      <p className="nota">Dá de alta a cada persona con su email de Google de la organización: entra con el botón "Entrar con Google". La contraseña es solo un acceso de emergencia (mínimo 10 caracteres) y no se puede ver: solo se reemplaza.</p>
       {msg && <Aviso tipo={msg.error ? 'error' : 'info'}>{msg.t}</Aviso>}
       <Tabla>
         <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Nueva contraseña</th></tr></thead>
@@ -55,7 +56,7 @@ export function AdminUsuarios() {
         <label>Email<input type="email" required value={nuevo.email} onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })} /></label>
         <label>Nombre<input value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} /></label>
         <label>Rol<select className="sel" value={nuevo.rol} onChange={(e) => setNuevo({ ...nuevo, rol: e.target.value })}>{ROLES.map((r) => <option key={r.v} value={r.v}>{r.t}</option>)}</select></label>
-        <label>Contraseña<input type="text" autoComplete="off" required minLength={10} value={nuevo.password} onChange={(e) => setNuevo({ ...nuevo, password: e.target.value })} /></label>
+        <label>Contraseña (opcional)<input type="text" autoComplete="off" minLength={10} placeholder="Vacía: entra con Google" value={nuevo.password} onChange={(e) => setNuevo({ ...nuevo, password: e.target.value })} /></label>
         <button type="button" className="btn" onClick={() => setNuevo({ ...nuevo, password: generarClave() })}>Generar</button>
         <button className="btn primario">Crear usuario</button>
       </form>
