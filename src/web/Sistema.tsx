@@ -4,6 +4,7 @@ import { useApp } from './contexto';
 import { supabase } from './supabase';
 import { Aviso, Seccion, Tabla } from './ui';
 import { ESTADO_CUENTA } from './reglas';
+import { AdminUsuarios } from './Usuarios';
 
 const fecha = (s?: string | null) => (s ? new Date(s).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '–');
 const TIPO: Record<string, string> = { cuentas: 'Cuentas', historico: 'Histórico', hoy: 'Hoy' };
@@ -60,6 +61,8 @@ export function Sistema() {
   return (
     <div className="pila">
       {msg && <Aviso tipo={msg.error ? 'error' : 'info'}>{msg.t}</Aviso>}
+
+      <AdminUsuarios />
 
       <Seccion id="bms" titulo="Business Managers" extra={<>
         <button className="btn" onClick={() => sync('cuentas')}>Actualizar cuentas</button>

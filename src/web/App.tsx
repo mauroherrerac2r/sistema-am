@@ -7,6 +7,7 @@ import { Analisis } from './Analisis';
 import { Configuracion } from './Configuracion';
 import { Sistema } from './Sistema';
 import { Ventas } from './Ventas';
+import { MiClave } from './Usuarios';
 import { cargarConfig } from './datos';
 import { Contexto, Ctx } from './contexto';
 
@@ -38,6 +39,7 @@ function Interna({ sesion }: { sesion: Session }) {
   const [error, setError] = useState('');
   const [pagina, setPagina] = useState(() => location.hash.replace('#', '') || 'inicio');
   const [filtro, setFiltro] = useState(() => leerLS('filtroAM') || 'mios');
+  const [miClave, setMiClave] = useState(false);
 
   const recargar = useCallback(async () => {
     try { setBase(await cargarConfig()); setError(''); } catch (e: any) { setError(e.message); }
@@ -80,8 +82,10 @@ function Interna({ sesion }: { sesion: Session }) {
             <option value="todos">Todos los clientes</option>
             {ams.filter((p) => p.id !== ctx.yo.id).map((p) => <option key={p.id} value={p.id}>De {p.nombre || p.email}</option>)}
           </select>
+          <button className="btn" onClick={() => setMiClave(true)}>Mi contraseña</button>
           <button className="btn" onClick={() => supabase.auth.signOut()}>Salir</button>
         </header>
+        {miClave && <MiClave cerrar={() => setMiClave(false)} />}
         <main>
           {pagina === 'analisis' ? <Analisis /> : pagina === 'ventas' ? <Ventas /> : pagina === 'config' ? <Configuracion /> : pagina === 'sistema' && ctx.yo.rol === 'admin' ? <Sistema /> : <Inicio />}
         </main>
