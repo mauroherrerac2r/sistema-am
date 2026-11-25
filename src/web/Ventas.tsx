@@ -383,11 +383,11 @@ function FuentesIA({ cliente }: { cliente: Cliente }) {
     if (!cliente.drive_carpeta_id) return;
     documentosDeCliente(cliente.id).then((r) => setDocs(r.archivos)).catch((e) => setError(e.message));
   }, [cliente.id, cliente.drive_carpeta_id]);
-  if (!cliente.drive_carpeta_id) return <p className="nota">Antes de escribir, la IA lee el contexto de arriba y los últimos 3 análisis de este cliente. <b>Sumale una carpeta de Drive</b> en la pestaña Clientes para que también lea la ficha de contexto, las transcripciones de Meet y los documentos del cliente.</p>;
+  if (!cliente.drive_carpeta_id) return <p className="nota">Antes de escribir, la IA lee el contexto de arriba y los últimos 3 análisis de este cliente. Opcional: sumale una carpeta de Drive en la pestaña Clientes para que además lea la ficha de contexto, las transcripciones de Meet y los documentos del cliente.</p>;
   return (
     <details className="fuentes" open={!!docs?.length && docs.length <= 6}>
-      <summary>Antes de escribir, la IA lee el contexto de arriba, los últimos 3 análisis y {docs ? `${docs.length} documentos de la carpeta del cliente` : 'la carpeta de Drive del cliente'}</summary>
-      {error && <Aviso tipo="error">{error}</Aviso>}
+      <summary>Antes de escribir, la IA lee el contexto de arriba, los últimos 3 análisis y {docs ? `${docs.length} documentos de la carpeta del cliente` : error ? 'no puede leer la carpeta de Drive por ahora' : 'la carpeta de Drive del cliente'}</summary>
+      {error && <Aviso>No se pudo leer la carpeta de Drive ({error}). El análisis se hace igual, con el contexto del negocio, el del período y los análisis anteriores.</Aviso>}
       {docs && <ul className="docs">{docs.map((d) => <li key={d.link}><a href={d.link} target="_blank" rel="noopener noreferrer">{d.nombre}</a> <span className="muted chico">· {tipoDoc(d.tipo)} · {new Date(d.modificado).toLocaleDateString('es-AR')}</span></li>)}</ul>}
     </details>
   );
