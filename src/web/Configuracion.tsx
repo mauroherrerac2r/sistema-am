@@ -5,6 +5,8 @@ import { supabase } from './supabase';
 import { leerConfig, slug, numero, FilaConfig } from '../server/config-csv';
 import type { CfgCuenta } from './reglas';
 import { Aviso, Tabla } from './ui';
+import { CarpetaCliente } from './CarpetaCliente';
+import { leerSheetDrive } from './api';
 
 const CANALES = ['Formulario', 'WhatsApp', 'Messenger', 'Instagram'];
 const aNum = (s: string) => numero(s);
@@ -15,6 +17,7 @@ export function Configuracion() {
   const [msg, setMsg] = useState<{ t: string; error?: boolean } | null>(null);
   const [nuevo, setNuevo] = useState('');
   const ams = perfiles.filter((p) => p.rol !== 'pm');
+  const pms = perfiles.filter((p) => p.rol === 'pm' || p.rol === 'admin');
   const asignadas = useMemo(() => new Set(cuentasCfg.map((c) => c.ad_account_id)), [cuentasCfg]);
   const libres = cuentasMeta.filter((c) => !asignadas.has(c.id) && c.bm_id);
 
@@ -34,7 +37,7 @@ export function Configuracion() {
     <div className="pila">
       <section className="seccion">
         <h2>Clientes</h2>
-        <p className="nota">Presupuestos, CPL objetivo y máximo, canales y AM de cada cliente. Los cambios se ven al instante en Operación.</p>
+        <p className="nota">Todo se carga acá: no hace falta ningún Sheet. Cualquier AM o PM puede crear un cliente, sumarle sus cuentas de Meta y completar presupuesto, CPL objetivo y máximo, canales, AM, PM y carpeta de Drive. Los cambios se ven al instante en Operación.</p>
         {msg && <Aviso tipo={msg.error ? 'error' : 'info'}>{msg.t}</Aviso>}
         <div className="controles">
           <label>Nuevo cliente<input value={nuevo} onChange={(e) => setNuevo(e.target.value)} placeholder="Nombre del cliente" /></label>
@@ -52,6 +55,12 @@ export function Configuracion() {
                 <select className="sel" value={cli.am_id ?? ''} onChange={(e) => correr(() => supabase.from('clients').update({ am_id: e.target.value || null }).eq('id', cli.id), 'AM actualizado.')}>
                   <option value="">Sin asignar</option>
                   {ams.map((p) => <option key={p.id} value={p.id}>{p.nombre || p.email}</option>)}
+                </select>
+              </label>
+              <label className="en-linea">PM
+                <select className="sel" value={cli.pm_id ?? ''} onChange={(e) => correr(() => supabase.from('clients').update({ pm_id: e.target.value || null }).eq('id', cli.id), 'PM actualizado.')}>
+                  <option value="">Sin asignar</option>
+                  {pms.map((p) => <option key={p.id} value={p.id}>{p.nombre || p.email}</option>)}
                 </select>
               </label>
               <label className="en-linea"><input type="checkbox" checked={cli.activo} onChange={(e) => correr(() => supabase.from('clients').update({ activo: e.target.checked }).eq('id', cli.id), e.target.checked ? 'Cliente activado.' : 'Cliente desactivado: deja de aparecer en Operación.')} /> Activo</label>
@@ -72,6 +81,7 @@ export function Configuracion() {
                 {libres.map((a) => <option key={a.id} value={a.id}>{a.nombre} · {a.id}</option>)}
               </select></label>
             </div>
+            <CarpetaCliente cliente={cli} alGuardar={recargar} />
           </section>
         );
       })}
@@ -116,6 +126,7 @@ function Importar() {
   const [estado, setEstado] = useState<{ t: string; error?: boolean } | null>(null);
 
   const [pegado, setPegado] = useState('');
+  const [linkSheet, setLinkSheet] = useState('');
   const procesar = (texto: string) => {
     setEstado(null); setFilas(null);
     if (!texto.trim()) return;
@@ -164,7 +175,10 @@ function Importar() {
       <p className="nota">Actualiza lo que ya existe, no duplica. Columna opcional <b>AM</b> con el email del Account Manager.</p>
       <p><b>Opción 1 · Pegar:</b> en el Sheet, seleccioná todo (<kbd>Cmd/Ctrl + A</kbd>), copiá (<kbd>Cmd/Ctrl + C</kbd>) y pegá acá, títulos incluidos.</p>
       <textarea className="pegar" rows={5} value={pegado} placeholder="Pegá acá las celdas copiadas del Sheet" onChange={(e) => { setPegado(e.target.value); procesar(e.target.value); }} />
-      <p><b>Opción 2 · Archivo:</b> Archivo → Descargar → CSV en el Sheet, y elegilo acá.</p>
+      <p><b>Opción 2 · Link del Google Sheet</b> (requiere Google Drive conectado en Sistema):</p>
+      <div className="controles"><label className="largo">Link<input value={linkSheet} placeholder="https://docs.google.com/spreadsheets/d/…" onChange={(e) => setLinkSheet(e.target.value)} /></label>
+        <button className="btn" disabled={!linkSheet.trim()} onClick={async () => { setEstado(null); try { const r = await leerSheetDrive(linkSheet); setPegado(''); procesar(r.texto); } catch (e: any) { setEstado({ t: e.message, error: true }); } }}>Leer Sheet</button></div>
+      <p><b>Opción 3 · Archivo:</b> Archivo → Descargar → CSV en el Sheet, y elegilo acá.</p>
       <input type="file" onChange={(e) => leer(e.target.files?.[0])} />
       {estado && <Aviso tipo={estado.error ? 'error' : 'info'}>{estado.t}</Aviso>}
       {filas && (

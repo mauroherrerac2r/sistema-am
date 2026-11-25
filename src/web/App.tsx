@@ -53,9 +53,10 @@ function Interna({ sesion }: { sesion: Session }) {
     if (!base) return null;
     const yo = base.perfiles.find((p) => p.id === sesion.user.id);
     if (!yo) return null;
-    const tieneMios = base.clientes.some((c) => c.am_id === yo.id);
+    const esMio = (c: { am_id: string | null; pm_id: string | null }, id: string) => c.am_id === id || c.pm_id === id;
+    const tieneMios = base.clientes.some((c) => esMio(c, yo.id));
     const f = filtro === 'mios' && !tieneMios ? 'todos' : filtro;
-    const visibles = base.clientes.filter((c) => c.activo && (f === 'todos' || c.am_id === (f === 'mios' ? yo.id : f)));
+    const visibles = base.clientes.filter((c) => c.activo && (f === 'todos' || esMio(c, f === 'mios' ? yo.id : f)));
     return { sesion, yo, ...base, visibles, metaPorId: new Map(base.cuentasMeta.map((m) => [m.id, m])), recargar };
   }, [base, filtro, sesion, recargar]);
 
@@ -63,7 +64,7 @@ function Interna({ sesion }: { sesion: Session }) {
   if (!base) return <div className="centro muted">Cargando…</div>;
   if (!ctx) return <div className="centro"><p>Tu usuario no tiene permisos en el sistema. Pedile a un admin que te habilite.</p><button className="btn" onClick={() => supabase.auth.signOut()}>Salir</button></div>;
 
-  const ams = ctx.perfiles.filter((p) => p.rol === 'am' || p.rol === 'admin');
+  const ams = ctx.perfiles;
   return (
     <Contexto.Provider value={ctx}>
       <div className="app">

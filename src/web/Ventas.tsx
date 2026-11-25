@@ -10,6 +10,7 @@ import { Aviso, Kpi, Seccion, Tabla, linkAnuncio } from './ui';
 import { Markdown } from './Markdown';
 import { RetornoPorSede, Embudo, MapaAnuncios, Concentracion, coloresSede } from './GraficosVentas';
 import { numero } from '../server/config-csv';
+import { leerSheetDrive, documentosDeCliente, tipoDoc, ArchivoCarpeta } from './api';
 
 const nombreTipo = { cliente: 'Versión cliente', paid: 'Versión Paid Media' } as const;
 
@@ -104,6 +105,8 @@ function NuevaCarga({ creada }: { creada: (id: string) => void }) {
   const [lectura, setLectura] = useState<LecturaVentas | null>(null);
   const [msg, setMsg] = useState<{ t: string; error?: boolean } | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [linkSheet, setLinkSheet] = useState('');
+  const [leyendoSheet, setLeyendoSheet] = useState(false);
 
   const procesar = (t: string) => {
     setMsg(null); setLectura(null);
@@ -148,8 +151,11 @@ function NuevaCarga({ creada }: { creada: (id: string) => void }) {
         <ContextoIA cliente={cliente} periodo={periodo} setPeriodo={setPeriodo} />
 
         <h3><span className="nro">3</span> Export del CRM</h3>
-        <textarea className="pegar" rows={5} value={texto} placeholder="Pegá acá las celdas del export (con títulos), o elegí el archivo abajo" onChange={(e) => { setTexto(e.target.value); procesar(e.target.value); }} />
-        <p><input type="file" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const t = await f.text(); setTexto(''); procesar(t); } }} /></p>
+        <p className="nota">Tres formas, la que te quede más cómoda:</p>
+        <div className="controles"><label className="largo">Link de Google Sheet<input value={linkSheet} placeholder="https://docs.google.com/spreadsheets/d/… (toma la pestaña del link)" onChange={(e) => setLinkSheet(e.target.value)} /></label>
+          <button className="btn" disabled={!linkSheet.trim() || leyendoSheet} onClick={async () => { setLeyendoSheet(true); setMsg(null); try { const r = await leerSheetDrive(linkSheet); setTexto(''); procesar(r.texto); setMsg({ t: `Leí "${r.titulo}", pestaña "${r.pestana}".` }); } catch (e: any) { setMsg({ t: e.message, error: true }); } setLeyendoSheet(false); }}>{leyendoSheet ? 'Leyendo…' : 'Leer Sheet'}</button></div>
+        <textarea className="pegar" rows={4} value={texto} placeholder="…o pegá acá las celdas del export (con títulos)" onChange={(e) => { setTexto(e.target.value); procesar(e.target.value); }} />
+        <p><input type="file" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const t = await f.text(); setTexto(''); procesar(t); } }} /> <span className="muted chico">…o subí el archivo CSV</span></p>
         {msg && <Aviso tipo={msg.error ? 'error' : 'info'}>{msg.t}</Aviso>}
         {lectura && (
           <>
@@ -276,7 +282,7 @@ function VistaCarga({ carga, cliente, volver, borrada, actualizada }: { carga: C
 
           {hall.length > 0 && <Seccion id="hallazgos" titulo="Hallazgos"><ul className="hallazgos">{hall.map((h) => <li key={h.texto} className={h.tipo}>{h.texto}</li>)}</ul></Seccion>}
 
-          <Seccion id="ia" titulo="Análisis con IA"><PanelIA cargaId={carga.id} entrada={entrada} contextoPendiente={periodo !== guardadoPeriodo} /></Seccion>
+          <Seccion id="ia" titulo="Análisis con IA"><PanelIA cargaId={carga.id} cliente={cliente} entrada={entrada} contextoPendiente={periodo !== guardadoPeriodo} /></Seccion>
 
           <Seccion id="sedes" titulo="Por sede"><TablaGrupos grupos={sedesTodas} etiqueta="Sede" d={d} /></Seccion>
           <Seccion id="campanas" titulo={`Por campaña${sede ? ` · ${sede}` : ''}`}><TablaGrupos grupos={campanas} etiqueta="Campaña" d={d} /></Seccion>
@@ -320,7 +326,7 @@ function TablaGrupos({ grupos, etiqueta, d }: { grupos: Grupo[]; etiqueta: strin
   );
 }
 
-function PanelIA({ cargaId, entrada, contextoPendiente }: { cargaId: string; entrada: object | null; contextoPendiente: boolean }) {
+function PanelIA({ cargaId, cliente, entrada, contextoPendiente }: { cargaId: string; cliente: Cliente; entrada: object | null; contextoPendiente: boolean }) {
   const { sesion } = useApp();
   const [lista, setLista] = useState<Analisis[] | null>(null);
   const [msg, setMsg] = useState<{ t: string; error?: boolean } | null>(null);
@@ -345,6 +351,7 @@ function PanelIA({ cargaId, entrada, contextoPendiente }: { cargaId: string; ent
   return (
     <div className="pila-chica">
       <p className="nota">La IA parte del contexto de arriba y de todos los números del período (sin importar el filtro de sede). La versión cliente usa lenguaje de negocio; la de Paid Media trae acciones concretas por anuncio y campaña. Revisala antes de enviarla.</p>
+      <FuentesIA cliente={cliente} />
       {contextoPendiente && <Aviso>Tenés cambios sin guardar en el contexto del período: guardalos arriba para que la IA los tenga en cuenta.</Aviso>}
       <div className="seg">
         <button className="btn primario" disabled={!entrada || generando || contextoPendiente} onClick={() => pedir('cliente')}>Generar versión cliente</button>
@@ -356,11 +363,32 @@ function PanelIA({ cargaId, entrada, contextoPendiente }: { cargaId: string; ent
           <div className="fila"><h3>{nombreTipo[a.tipo]}</h3><span className="muted chico">{new Date(a.creado_en).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</span><span className="sp" />
             {a.estado === 'listo' && <button className="btn" onClick={() => copiar(a)}>{copiado === a.id ? 'Copiado ✓' : 'Copiar texto'}</button>}
           </div>
-          {a.estado === 'generando' && <p className="muted">Generando…</p>}
+          {a.estado === 'generando' && <p className="muted">Leyendo documentos y generando…</p>}
+          {a.fuentes && (a.fuentes.documentos.length > 0 || a.fuentes.anteriores.length > 0 || a.fuentes.aviso) && (
+            <p className="nota">Leyó: {[a.fuentes.documentos.length ? `${a.fuentes.documentos.length} documentos (${a.fuentes.documentos.join(', ')})` : '', a.fuentes.anteriores.length ? `${a.fuentes.anteriores.length} análisis anteriores` : ''].filter(Boolean).join(' · ') || 'solo los datos'}{a.fuentes.omitidos?.length ? ` · omitidos por tamaño: ${a.fuentes.omitidos.join(', ')}` : ''}{a.fuentes.aviso ? ` · ${a.fuentes.aviso}` : ''}</p>
+          )}
           {a.estado === 'error' && <Aviso tipo="error">No se pudo generar: {a.error}</Aviso>}
           {a.estado === 'listo' && a.contenido && <Markdown texto={a.contenido} />}
         </article>
       ))}
     </div>
+  );
+}
+
+/** Qué va a leer la IA además de los números: carpeta de Drive del cliente y análisis anteriores. */
+function FuentesIA({ cliente }: { cliente: Cliente }) {
+  const [docs, setDocs] = useState<ArchivoCarpeta[] | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!cliente.drive_carpeta_id) return;
+    documentosDeCliente(cliente.id).then((r) => setDocs(r.archivos)).catch((e) => setError(e.message));
+  }, [cliente.id, cliente.drive_carpeta_id]);
+  if (!cliente.drive_carpeta_id) return <p className="nota">Antes de escribir, la IA lee el contexto de arriba y los últimos 3 análisis de este cliente. <b>Sumale una carpeta de Drive</b> en la pestaña Clientes para que también lea la ficha de contexto, las transcripciones de Meet y los documentos del cliente.</p>;
+  return (
+    <details className="fuentes" open={!!docs?.length && docs.length <= 6}>
+      <summary>Antes de escribir, la IA lee el contexto de arriba, los últimos 3 análisis y {docs ? `${docs.length} documentos de la carpeta del cliente` : 'la carpeta de Drive del cliente'}</summary>
+      {error && <Aviso tipo="error">{error}</Aviso>}
+      {docs && <ul className="docs">{docs.map((d) => <li key={d.link}><a href={d.link} target="_blank" rel="noopener noreferrer">{d.nombre}</a> <span className="muted chico">· {tipoDoc(d.tipo)} · {new Date(d.modificado).toLocaleDateString('es-AR')}</span></li>)}</ul>}
+    </details>
   );
 }

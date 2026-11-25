@@ -194,3 +194,8 @@ tr.r-sel td { background: color-mix(in srgb, var(--s1) 12%, transparent) !import
 .login .enlace { background: none; border: 0; color: var(--muted); font: inherit; font-size: 12.5px; text-decoration: underline; cursor: pointer; align-self: center; }
 .login-email { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--linea); padding-top: 12px; }
 .login-email label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+/* Drive: carpeta y fuentes de la IA */
+.carpeta { border-top: 1px solid var(--linea); margin-top: 12px; padding-top: 8px; }
+.docs { margin: 6px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.fuentes summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.integracion h3 { margin: 0 0 4px; }

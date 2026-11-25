@@ -34,6 +34,7 @@ Copiar `.env.example` y completar los valores (se cargan en Netlify en el paso 3
 - `SYNC_SECRET`: cualquier texto largo al azar.
 - `ANTHROPIC_API_KEY`: clave de console.anthropic.com para el análisis con IA (Fase 2). Marcarla como secreta.
 - `ANTHROPIC_MODEL` (opcional): modelo del análisis. Por defecto `claude-opus-5-5`.
+- `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`: el mismo cliente OAuth del login con Google. Habilitan la lectura de Drive (carpeta de contexto por cliente) y de Google Sheets. Marcar el secreto como secreta.
 
 **La `service_role key`, la `TOKEN_ENCRYPTION_KEY` y los tokens nunca van al repositorio.**
 
@@ -71,3 +72,11 @@ npm run dev     # web local
 npm test        # pruebas
 npm run build   # chequeo de tipos + build
 ```
+
+## Google Drive (contexto por cliente y Sheets)
+1. Google Cloud → proyecto Sistema AM → **APIs y servicios → Biblioteca**: habilitar **Google Drive API** y **Google Sheets API**.
+2. **Google Auth Platform → Acceso a los datos → Agregar o quitar permisos**: sumar `.../auth/drive.readonly`.
+3. **Clientes → tu cliente web → URIs de redireccionamiento**: agregar `https://TU-SITIO.netlify.app/api/google/callback`.
+4. Netlify: cargar `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` y volver a publicar.
+5. En la app: **Sistema → Integraciones → Conectar Google Drive** con una cuenta que vea todas las carpetas de clientes.
+6. **Clientes → Carpeta de Google Drive**: pegar el link de la carpeta de cada cliente. Un documento con "contexto", "ficha" o "brief" en el nombre se lee primero.

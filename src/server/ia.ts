@@ -15,6 +15,7 @@ Reglas:
 - Tené en cuenta las limitaciones que aparecen en "hallazgos" (ventas sin cargar, montos por cobrar, anuncios fuera de las cuentas) y nombralas cuando cambien la lectura.
 - Antes de los datos recibís el CONTEXTO que cargó el Account Manager: el del negocio (estable) y el del período. Es tu punto de partida: usalo para interpretar los números (qué cuenta como venta, ciclos de venta, cambios operativos, prioridades) y para decidir qué destacar. Si los datos contradicen el contexto, señalalo con respeto.
 - Si hay "roas_objetivo", evaluá cada sede, campaña y anuncio contra ese objetivo (no solo contra ROAS 1).
+- También podés recibir DOCUMENTOS DEL CLIENTE (ficha de contexto, transcripciones de reuniones, propuestas, reportes) y ANÁLISIS ANTERIORES. Usalos para entender acuerdos, objetivos y lo que ya se recomendó: si un análisis anterior recomendó algo, decí si los datos muestran que se hizo y qué pasó. Si un documento contradice a otro, priorizá el más reciente y la ficha de contexto. Citá el documento cuando una conclusión dependa de él.
 - Escribí en español neutro, directo, sin relleno ni frases motivacionales. Markdown simple: títulos con ##, viñetas con -, negritas con **. Podés usar tablas markdown chicas.`;
 
 const PROMPTS: Record<TipoAnalisis, string> = {
@@ -47,21 +48,35 @@ Extensión: entre 350 y 650 palabras.`,
 
 export interface ResultadoIA { texto: string; modelo: string; tokens_entrada: number; tokens_salida: number }
 
+export interface DocumentoIA { nombre: string; modificado: string; contenido: { tipo: 'texto'; texto: string } | { tipo: 'pdf'; base64: string }; recortado?: boolean }
+export interface AnalisisPrevio { fecha: string; tipo: string; periodo: string; contenido: string }
+export interface Extras { documentos?: DocumentoIA[]; anteriores?: AnalisisPrevio[] }
+
 /** Arma el pedido con el contexto PRIMERO y los números después. */
-export function armarPedido(entrada: Record<string, unknown>, contextoExtra: string | null): string {
+export function armarPedido(entrada: Record<string, unknown>, contextoExtra: string | null, extras: Extras = {}): string {
   const { contexto_negocio, contexto_periodo, ...datos } = entrada as { contexto_negocio?: string | null; contexto_periodo?: string | null };
   const periodo = [contexto_periodo, contextoExtra].filter(Boolean).join('\n');
-  return [
+  const textos = (extras.documentos ?? []).filter((d) => d.contenido.tipo === 'texto');
+  const pdfs = (extras.documentos ?? []).filter((d) => d.contenido.tipo === 'pdf');
+  const partes = [
     '# Contexto cargado por el Account Manager (leelo primero)',
     `## Del negocio\n${contexto_negocio?.trim() || 'Sin contexto del negocio cargado.'}`,
     `## Del período\n${periodo.trim() || 'Sin contexto del período cargado.'}`,
-    '# Datos del período',
-    JSON.stringify(datos),
-    'Con ese contexto en mente, escribí el análisis.',
-  ].join('\n\n');
+  ];
+  if (textos.length || pdfs.length) {
+    partes.push('# Documentos del cliente (carpeta de Drive)');
+    if (pdfs.length) partes.push(`Además se adjuntan como PDF: ${pdfs.map((d) => `"${d.nombre}"`).join(', ')}.`);
+    for (const d of textos) partes.push(`## ${d.nombre} (modificado ${d.modificado.slice(0, 10)})${d.recortado ? ' [recortado]' : ''}\n${(d.contenido as { texto: string }).texto.trim()}`);
+  }
+  if (extras.anteriores?.length) {
+    partes.push('# Análisis anteriores de este cliente (del más reciente al más viejo)');
+    for (const a of extras.anteriores) partes.push(`## ${a.fecha.slice(0, 10)} · versión ${a.tipo} · período ${a.periodo}\n${a.contenido.trim()}`);
+  }
+  partes.push('# Datos del período', JSON.stringify(datos), 'Con todo ese contexto en mente, escribí el análisis.');
+  return partes.join('\n\n');
 }
 
-export async function generarAnalisis(tipo: TipoAnalisis, entrada: Record<string, unknown>, contexto: string | null): Promise<ResultadoIA> {
+export async function generarAnalisis(tipo: TipoAnalisis, entrada: Record<string, unknown>, contexto: string | null, extras: Extras = {}): Promise<ResultadoIA> {
   const client = new Anthropic(); // usa ANTHROPIC_API_KEY
   const stream = client.beta.messages.stream({
     model: MODELO,
@@ -71,7 +86,15 @@ export async function generarAnalisis(tipo: TipoAnalisis, entrada: Record<string
     thinking: { type: 'adaptive' },
     output_config: { effort: 'high' },
     system: PROMPTS[tipo],
-    messages: [{ role: 'user', content: armarPedido(entrada, contexto) }],
+    messages: [{
+      role: 'user',
+      content: [
+        ...(extras.documentos ?? []).flatMap((d) => (d.contenido.tipo === 'pdf'
+          ? [{ type: 'document' as const, title: d.nombre, source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: d.contenido.base64 } }]
+          : [])),
+        { type: 'text' as const, text: armarPedido(entrada, contexto, extras) },
+      ],
+    }],
   });
   const msg = await stream.finalMessage();
   if (msg.stop_reason === 'refusal') throw new Error('El modelo no generó el análisis (rechazo de seguridad). Probá de nuevo o revisá el contexto cargado.');

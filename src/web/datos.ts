@@ -5,7 +5,7 @@ import { canalAnuncio } from './reglas';
 import type { VentaAnuncio } from './ventas';
 
 export interface Perfil { id: string; email: string; nombre: string | null; rol: 'admin' | 'am' | 'pm' }
-export interface Cliente { id: string; slug: string; nombre: string; am_id: string | null; activo: boolean; contexto_ia: string | null; roas_objetivo: number | null }
+export interface Cliente { id: string; slug: string; nombre: string; am_id: string | null; pm_id: string | null; activo: boolean; contexto_ia: string | null; roas_objetivo: number | null; drive_carpeta_id: string | null }
 
 /** Supabase devuelve como máximo 1000 filas por pedido: se pagina. */
 async function todas<T>(armar: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: any }>): Promise<T[]> {
@@ -23,7 +23,7 @@ const num = (v: unknown) => (v == null ? null : Number(v));
 export async function cargarConfig() {
   const [perfiles, clientes, cfg, cuentas] = await Promise.all([
     supabase.from('profiles').select('id,email,nombre,rol').order('nombre'),
-    supabase.from('clients').select('id,slug,nombre,am_id,activo,contexto_ia,roas_objetivo').order('nombre'),
+    supabase.from('clients').select('id,slug,nombre,am_id,pm_id,activo,contexto_ia,roas_objetivo,drive_carpeta_id').order('nombre'),
     supabase.from('client_accounts').select('*'),
     todas<any>((a, b) => supabase.from('ad_accounts').select('id,nombre,moneda,zona_horaria,estado_cuenta,bm_id').order('nombre').range(a, b)),
   ]);
@@ -153,10 +153,10 @@ export async function borrarCarga(id: string) {
   if (error) throw new Error(error.message);
 }
 
-export interface Analisis { id: string; tipo: 'cliente' | 'paid'; estado: 'generando' | 'listo' | 'error'; contenido: string | null; error: string | null; contexto: string | null; modelo: string | null; creado_en: string }
+export interface Analisis { id: string; tipo: 'cliente' | 'paid'; estado: 'generando' | 'listo' | 'error'; contenido: string | null; error: string | null; contexto: string | null; modelo: string | null; creado_en: string; fuentes: { documentos: string[]; omitidos: string[]; anteriores: string[]; aviso?: string } | null }
 
 export async function analisisDeCarga(id: string): Promise<Analisis[]> {
-  const { data, error } = await supabase.from('analisis_ia').select('id,tipo,estado,contenido,error,contexto,modelo,creado_en').eq('carga_id', id).order('creado_en', { ascending: false });
+  const { data, error } = await supabase.from('analisis_ia').select('id,tipo,estado,contenido,error,contexto,modelo,creado_en,fuentes').eq('carga_id', id).order('creado_en', { ascending: false });
   if (error) throw new Error(error.message);
   return data as Analisis[];
 }
@@ -176,4 +176,9 @@ export async function guardarContextoCliente(id: string, contexto_ia: string | n
 export async function guardarContextoCarga(id: string, contexto: string | null) {
   const { error } = await supabase.from('ventas_cargas').update({ contexto }).eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+export async function estadoDrive(): Promise<{ cuenta_email: string | null; conectado_en: string; ultimo_error: string | null } | null> {
+  const { data } = await supabase.from('integraciones_publico').select('cuenta_email,conectado_en,ultimo_error').eq('id', 'google_drive').maybeSingle();
+  return data as any;
 }
