@@ -236,3 +236,14 @@ td.sangria { padding-left: 26px; }
 .reco p { margin: 0; font-size: 13.5px; line-height: 1.45; }
 .tipo-reco { font-size: 11.5px; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
 @media (max-width: 760px) { .ficha { position: static; } .cuentas-recos { grid-template-columns: 1fr; } }
+/* Clientes: alta guiada y fichas */
+.alta h4 { display: flex; align-items: center; gap: 8px; margin: 16px 0 6px; font-size: 14px; }
+.lista-cuentas { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px; max-height: 320px; overflow-y: auto; padding: 2px; }
+.cuenta-opcion { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--linea); border-radius: 8px; cursor: pointer; font-size: 13px; }
+.cuenta-opcion.on { border-color: var(--fg); background: var(--hover); }
+.faltantes { margin: 10px 0 0; padding-left: 18px; color: var(--aviso); font-size: 13px; }
+.ficha-cliente { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.ficha-cliente::-webkit-details-marker { display: none; }
+.ficha-cliente::before { content: "▸"; color: var(--muted); }
+details[open] > .ficha-cliente::before { content: "▾"; }
+details[open] > .ficha-cliente { margin-bottom: 10px; }

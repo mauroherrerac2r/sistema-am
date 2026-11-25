@@ -7,6 +7,7 @@ import type { CfgCuenta } from './reglas';
 import { Aviso, Tabla } from './ui';
 import { CarpetaCliente } from './CarpetaCliente';
 import { leerSheetDrive } from './api';
+import { AltaCliente } from './AltaCliente';
 
 const CANALES = ['Formulario', 'WhatsApp', 'Messenger', 'Instagram'];
 const aNum = (s: string) => numero(s);
@@ -15,7 +16,10 @@ const deNum = (v: number | null) => (v == null ? '' : v.toLocaleString('es-AR', 
 export function Configuracion() {
   const { clientes, cuentasCfg, cuentasMeta, metaPorId, perfiles, recargar } = useApp();
   const [msg, setMsg] = useState<{ t: string; error?: boolean } | null>(null);
-  const [nuevo, setNuevo] = useState('');
+  const [alta, setAlta] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroAm, setFiltroAm] = useState('todos');
+  const [soloIncompletos, setSoloIncompletos] = useState(false);
   const ams = perfiles.filter((p) => p.rol !== 'pm');
   const pms = perfiles.filter((p) => p.rol === 'pm');
   const asignadas = useMemo(() => new Set(cuentasCfg.map((c) => c.ad_account_id)), [cuentasCfg]);
@@ -27,11 +31,17 @@ export function Configuracion() {
     if (!error) await recargar();
   };
 
-  const crearCliente = () => {
-    const nombre = nuevo.trim();
-    if (!nombre) return;
-    correr(() => supabase.from('clients').insert({ nombre, slug: slug(nombre) }), `Cliente ${nombre} creado. Ahora sumale sus cuentas.`).then(() => setNuevo(''));
-  };
+  /** Qué le falta a la configuración de una cuenta para que las alertas funcionen bien. */
+  const faltantes = (c: CfgCuenta) => [!c.canales.length && 'canales', c.presupuesto_semanal == null && 'presupuesto', (c.cpl_objetivo == null || c.cpl_maximo == null) && 'CPL', !c.pm_id && 'PM'].filter(Boolean) as string[];
+  const b = busqueda.trim().toLowerCase();
+  const lista = clientes.filter((cli) => {
+    const cuentas = cuentasCfg.filter((c) => c.client_id === cli.id);
+    if (b && !cli.nombre.toLowerCase().includes(b) && !cuentas.some((c) => (metaPorId.get(c.ad_account_id)?.nombre ?? '').toLowerCase().includes(b) || c.ad_account_id.includes(b) || (c.sede ?? '').toLowerCase().includes(b))) return false;
+    if (filtroAm !== 'todos' && (filtroAm === 'sin' ? cli.am_id : cli.am_id !== filtroAm)) return false;
+    if (soloIncompletos && !cuentas.some((c) => faltantes(c).length) && cuentas.length) return false;
+    return true;
+  });
+  const nombrePerfil = new Map(perfiles.map((p) => [p.id, p.nombre || p.email]));
 
   return (
     <div className="pila">
@@ -40,17 +50,31 @@ export function Configuracion() {
         <p className="nota">Todo se carga acá: no hace falta ningún Sheet. Cualquier AM o PM puede crear un cliente, sumarle sus cuentas de Meta y completar presupuesto, CPL objetivo y máximo, canales, AM del cliente, PM de cada cuenta y carpeta de Drive. Los cambios se ven al instante en Operación.</p>
         {msg && <Aviso tipo={msg.error ? 'error' : 'info'}>{msg.t}</Aviso>}
         <div className="controles">
-          <label>Nuevo cliente<input value={nuevo} onChange={(e) => setNuevo(e.target.value)} placeholder="Nombre del cliente" /></label>
-          <button className="btn primario" onClick={crearCliente} disabled={!nuevo.trim()}>Crear</button>
+          {!alta && <button className="btn primario" onClick={() => setAlta(true)}>+ Nuevo cliente</button>}
+          <label className="largo">Buscar<input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Cliente, cuenta, sede o ID" /></label>
+          <label>AM<select className="sel" value={filtroAm} onChange={(e) => setFiltroAm(e.target.value)}>
+            <option value="todos">Todos</option>{ams.map((p) => <option key={p.id} value={p.id}>{p.nombre || p.email}</option>)}<option value="sin">Sin AM</option>
+          </select></label>
+          <label className="en-linea"><input type="checkbox" checked={soloIncompletos} onChange={(e) => setSoloIncompletos(e.target.checked)} /> Solo con datos incompletos</label>
         </div>
       </section>
 
-      {clientes.map((cli) => {
+      {alta && <AltaCliente cerrar={() => { setAlta(false); setMsg({ t: 'Cliente creado. Ya aparece en Operación y en el panel de Paid Media.' }); }} />}
+
+      {!lista.length && <p className="muted">Ningún cliente coincide con el filtro.</p>}
+      {lista.map((cli) => {
         const cuentas = cuentasCfg.filter((c) => c.client_id === cli.id);
+        const incompletas = cuentas.filter((c) => faltantes(c).length).length;
         return (
-          <section key={cli.id} className="panel cliente-cfg">
+          <details key={cli.id} className="panel cliente-cfg" open={!!b || lista.length === 1}>
+            <summary className="ficha-cliente">
+              <b>{cli.nombre}</b>
+              <span className="muted chico">AM: {cli.am_id ? nombrePerfil.get(cli.am_id) : 'sin asignar'} · {cuentas.length} {cuentas.length === 1 ? 'cuenta' : 'cuentas'}{!cli.activo ? ' · inactivo' : ''}</span>
+              {incompletas > 0 && <span className="pill n-atencion">{incompletas} {incompletas === 1 ? 'cuenta incompleta' : 'cuentas incompletas'}</span>}
+              {!cuentas.length && <span className="pill n-atencion">Sin cuentas</span>}
+            </summary>
             <div className="fila">
-              <h3>{cli.nombre}</h3><span className="sp" />
+              <span className="muted chico">Datos del cliente</span><span className="sp" />
               <label className="en-linea">AM
                 <select className="sel" value={cli.am_id ?? ''} onChange={(e) => correr(() => supabase.from('clients').update({ am_id: e.target.value || null }).eq('id', cli.id), 'AM actualizado.')}>
                   <option value="">Sin asignar</option>
@@ -76,11 +100,14 @@ export function Configuracion() {
               </select></label>
             </div>
             <CarpetaCliente cliente={cli} alGuardar={recargar} />
-          </section>
+          </details>
         );
       })}
 
-      <Importar />
+      <details className="panel">
+        <summary className="ficha-cliente"><b>Importar desde un Google Sheet</b><span className="muted chico">Solo para migrar clientes cargados en una planilla. El alta normal es "+ Nuevo cliente".</span></summary>
+        <Importar />
+      </details>
     </div>
   );
 }
