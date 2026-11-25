@@ -15,6 +15,7 @@ export interface CfgCuenta {
   cpl_maximo: number | null;
   activa: boolean;
   nota: string | null;
+  pm_id?: string | null;
 }
 
 export interface CuentaMeta {

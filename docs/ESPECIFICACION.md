@@ -9,8 +9,8 @@ cliente, con conclusiones listas para el cliente y para el equipo de Paid Media.
 | Rol | Quién | Ve |
 |---|---|---|
 | admin | Mauro | todo + BMs, sincronización, configuración |
-| am | Mauro, Nico | sus clientes por defecto, con opción de ver todos |
-| pm | (Fase 3) | módulo Paid Media |
+| am | Mauro, Nicolás | sus clientes por defecto (el AM va por cliente), con opción de ver todos |
+| pm | Agustina, Victoria, Lucía | panel de Paid Media; el PM se asigna por cuenta publicitaria |
 
 Clientes con una o varias cuentas publicitarias; la **sede es opcional**.
 
@@ -73,7 +73,7 @@ Reglas de estado (mismas del panel actual):
 
 Columnas mínimas pedidas al cliente: fecha, monto, estado (vendido/no), y si existe: sede, producto, origen.
 
-### Fase 3 · Paid Media
+### Fase 3 · Paid Media ✅ (BETA: Operación, Análisis de cuenta, Creativos, Recomendaciones)
 Sobre la misma base: creativos y fatiga, tests, presupuesto por campaña, recomendaciones accionables,
 recepción de los briefs del AM. Solo lectura sobre Meta al inicio.
 

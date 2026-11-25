@@ -11,8 +11,11 @@ import { Detalle } from './Detalle';
 export interface CuentaVista { cfg: CfgCuenta; nombre: string; moneda: string | null; zona: string | null; sem: FilaSemana }
 export interface ClienteVista { id: string; nombre: string; cuentas: CuentaVista[]; total: TotalCliente; moneda: string | null }
 
-export function Inicio() {
-  const { visibles, cuentasCfg, metaPorId } = useApp();
+/** Panel diario. Con `soloCuentas` muestra solo esas cuentas (panel de Paid Media), con las mismas reglas. */
+export function Inicio({ soloCuentas }: { soloCuentas?: Set<string> } = {}) {
+  const { visibles: visiblesAM, clientes: todosClientes, cuentasCfg: todasCfg, metaPorId } = useApp();
+  const cuentasCfg = useMemo(() => (soloCuentas ? todasCfg.filter((c) => soloCuentas.has(c.ad_account_id)) : todasCfg), [todasCfg, soloCuentas]);
+  const visibles = useMemo(() => (soloCuentas ? todosClientes.filter((c) => c.activo && cuentasCfg.some((a) => a.client_id === c.id)) : visiblesAM), [soloCuentas, todosClientes, cuentasCfg, visiblesAM]);
   const [dias, setDias] = useState<Dia[] | null>(null);
   const [error, setError] = useState('');
   const [sync, setSync] = useState<{ terminado_en: string; estado: string } | null>(null);
@@ -62,7 +65,7 @@ export function Inicio() {
     if (desplazar) setTimeout(() => detalleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
-  if (!visibles.length) return <Aviso>No tenés clientes asignados. Elegí "Todos los clientes" arriba, o cargalos en la pestaña Clientes.</Aviso>;
+  if (!visibles.length) return <Aviso>{soloCuentas ? 'No hay cuentas asignadas a este PM. Se asignan en la pestaña Clientes, cuenta por cuenta.' : 'No tenés clientes asignados. Elegí "Todos los clientes" arriba, o cargalos en la pestaña Clientes.'}</Aviso>;
   if (error) return <Aviso tipo="error">No se pudieron cargar las métricas: {error}</Aviso>;
   if (!dias) return <p className="muted">Cargando métricas…</p>;
 

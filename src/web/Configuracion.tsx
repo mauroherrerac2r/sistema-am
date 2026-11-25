@@ -17,7 +17,7 @@ export function Configuracion() {
   const [msg, setMsg] = useState<{ t: string; error?: boolean } | null>(null);
   const [nuevo, setNuevo] = useState('');
   const ams = perfiles.filter((p) => p.rol !== 'pm');
-  const pms = perfiles.filter((p) => p.rol === 'pm' || p.rol === 'admin');
+  const pms = perfiles.filter((p) => p.rol === 'pm');
   const asignadas = useMemo(() => new Set(cuentasCfg.map((c) => c.ad_account_id)), [cuentasCfg]);
   const libres = cuentasMeta.filter((c) => !asignadas.has(c.id) && c.bm_id);
 
@@ -37,7 +37,7 @@ export function Configuracion() {
     <div className="pila">
       <section className="seccion">
         <h2>Clientes</h2>
-        <p className="nota">Todo se carga acá: no hace falta ningún Sheet. Cualquier AM o PM puede crear un cliente, sumarle sus cuentas de Meta y completar presupuesto, CPL objetivo y máximo, canales, AM, PM y carpeta de Drive. Los cambios se ven al instante en Operación.</p>
+        <p className="nota">Todo se carga acá: no hace falta ningún Sheet. Cualquier AM o PM puede crear un cliente, sumarle sus cuentas de Meta y completar presupuesto, CPL objetivo y máximo, canales, AM del cliente, PM de cada cuenta y carpeta de Drive. Los cambios se ven al instante en Operación.</p>
         {msg && <Aviso tipo={msg.error ? 'error' : 'info'}>{msg.t}</Aviso>}
         <div className="controles">
           <label>Nuevo cliente<input value={nuevo} onChange={(e) => setNuevo(e.target.value)} placeholder="Nombre del cliente" /></label>
@@ -57,19 +57,13 @@ export function Configuracion() {
                   {ams.map((p) => <option key={p.id} value={p.id}>{p.nombre || p.email}</option>)}
                 </select>
               </label>
-              <label className="en-linea">PM
-                <select className="sel" value={cli.pm_id ?? ''} onChange={(e) => correr(() => supabase.from('clients').update({ pm_id: e.target.value || null }).eq('id', cli.id), 'PM actualizado.')}>
-                  <option value="">Sin asignar</option>
-                  {pms.map((p) => <option key={p.id} value={p.id}>{p.nombre || p.email}</option>)}
-                </select>
-              </label>
               <label className="en-linea"><input type="checkbox" checked={cli.activo} onChange={(e) => correr(() => supabase.from('clients').update({ activo: e.target.checked }).eq('id', cli.id), e.target.checked ? 'Cliente activado.' : 'Cliente desactivado: deja de aparecer en Operación.')} /> Activo</label>
             </div>
             {!cuentas.length && <p className="muted">Sin cuentas todavía.</p>}
             {cuentas.length > 0 && (
               <Tabla>
-                <thead><tr><th>Cuenta de Meta</th><th>Sede</th><th>Canales</th><th>Presup. semanal</th><th>CPL objetivo</th><th>CPL máximo</th><th>Activa</th><th>Nota</th><th /></tr></thead>
-                <tbody>{cuentas.map((c) => <FilaCuenta key={c.ad_account_id} c={c} nombre={metaPorId.get(c.ad_account_id)?.nombre ?? c.ad_account_id} moneda={metaPorId.get(c.ad_account_id)?.moneda ?? ''} correr={correr} />)}</tbody>
+                <thead><tr><th>Cuenta de Meta</th><th>PM</th><th>Sede</th><th>Canales</th><th>Presup. semanal</th><th>CPL objetivo</th><th>CPL máximo</th><th>Activa</th><th>Nota</th><th /></tr></thead>
+                <tbody>{cuentas.map((c) => <FilaCuenta key={c.ad_account_id} pms={pms} c={c} nombre={metaPorId.get(c.ad_account_id)?.nombre ?? c.ad_account_id} moneda={metaPorId.get(c.ad_account_id)?.moneda ?? ''} correr={correr} />)}</tbody>
               </Tabla>
             )}
             <div className="controles">
@@ -91,7 +85,7 @@ export function Configuracion() {
   );
 }
 
-function FilaCuenta({ c, nombre, moneda, correr }: { c: CfgCuenta; nombre: string; moneda: string; correr: (f: () => PromiseLike<{ error: any }>, ok: string) => Promise<void> }) {
+function FilaCuenta({ c, nombre, moneda, correr, pms }: { c: CfgCuenta; nombre: string; moneda: string; correr: (f: () => PromiseLike<{ error: any }>, ok: string) => Promise<void>; pms: { id: string; nombre: string | null; email: string }[] }) {
   const [f, setF] = useState({ sede: c.sede ?? '', canales: c.canales, ps: deNum(c.presupuesto_semanal), obj: deNum(c.cpl_objetivo), max: deNum(c.cpl_maximo), activa: c.activa, nota: c.nota ?? '' });
   const cambiado = f.sede !== (c.sede ?? '') || f.canales.join() !== c.canales.join() || aNum(f.ps) !== c.presupuesto_semanal || aNum(f.obj) !== c.cpl_objetivo || aNum(f.max) !== c.cpl_maximo || f.activa !== c.activa || f.nota !== (c.nota ?? '');
   const errorMax = aNum(f.obj) != null && aNum(f.max) != null && aNum(f.max)! < aNum(f.obj)!;
@@ -102,6 +96,10 @@ function FilaCuenta({ c, nombre, moneda, correr }: { c: CfgCuenta; nombre: strin
   return (
     <tr>
       <td>{nombre}<div className="chico muted">{c.ad_account_id} · {moneda}</div></td>
+      <td><select className="sel" value={c.pm_id ?? ''} aria-label={`PM de ${nombre}`} onChange={(e) => correr(() => supabase.from('client_accounts').update({ pm_id: e.target.value || null }).eq('ad_account_id', c.ad_account_id), `${nombre}: PM actualizado.`)}>
+        <option value="">Sin PM</option>
+        {pms.map((p) => <option key={p.id} value={p.id}>{p.nombre || p.email}</option>)}
+      </select></td>
       <td><input className="corto" value={f.sede} placeholder="Opcional" onChange={(e) => setF({ ...f, sede: e.target.value })} /></td>
       <td className="canales">{CANALES.map((k) => (
         <label key={k}><input type="checkbox" checked={f.canales.includes(k)} onChange={(e) => setF({ ...f, canales: e.target.checked ? [...f.canales, k] : f.canales.filter((x) => x !== k) })} />{k}</label>

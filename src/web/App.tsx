@@ -7,11 +7,13 @@ import { Analisis } from './Analisis';
 import { Configuracion } from './Configuracion';
 import { Sistema } from './Sistema';
 import { Ventas } from './Ventas';
+import { PaidMedia } from './PaidMedia';
 import { cargarConfig } from './datos';
 import { Contexto, Ctx } from './contexto';
 
 const PAGINAS = [
   { id: 'inicio', titulo: 'Operación' },
+  { id: 'pm', titulo: 'Paid Media' },
   { id: 'analisis', titulo: 'Análisis puntual' },
   { id: 'ventas', titulo: 'Ventas y ROAS' },
   { id: 'config', titulo: 'Clientes' },
@@ -53,12 +55,16 @@ function Interna({ sesion }: { sesion: Session }) {
     if (!base) return null;
     const yo = base.perfiles.find((p) => p.id === sesion.user.id);
     if (!yo) return null;
-    const esMio = (c: { am_id: string | null; pm_id: string | null }, id: string) => c.am_id === id || c.pm_id === id;
+    // Un cliente es "mío" si soy su AM o si soy PM de alguna de sus cuentas.
+    const esMio = (c: { id: string; am_id: string | null }, id: string) => c.am_id === id || base.cuentasCfg.some((a) => a.client_id === c.id && a.pm_id === id);
     const tieneMios = base.clientes.some((c) => esMio(c, yo.id));
     const f = filtro === 'mios' && !tieneMios ? 'todos' : filtro;
     const visibles = base.clientes.filter((c) => c.activo && (f === 'todos' || esMio(c, f === 'mios' ? yo.id : f)));
     return { sesion, yo, ...base, visibles, metaPorId: new Map(base.cuentasMeta.map((m) => [m.id, m])), recargar };
   }, [base, filtro, sesion, recargar]);
+
+  // Los PM arrancan en su panel cuando entran sin una sección elegida.
+  useEffect(() => { if (ctx?.yo.rol === 'pm' && !location.hash) location.hash = 'pm'; }, [ctx?.yo.rol]);
 
   if (error) return <div className="centro"><p className="mal">No se pudieron cargar los datos: {error}</p></div>;
   if (!base) return <div className="centro muted">Cargando…</div>;
@@ -84,7 +90,7 @@ function Interna({ sesion }: { sesion: Session }) {
           <button className="btn" onClick={() => supabase.auth.signOut()}>Salir</button>
         </header>
         <main>
-          {pagina === 'analisis' ? <Analisis /> : pagina === 'ventas' ? <Ventas /> : pagina === 'config' ? <Configuracion /> : pagina === 'sistema' && ctx.yo.rol === 'admin' ? <Sistema /> : <Inicio />}
+          {pagina === 'pm' ? <PaidMedia /> : pagina === 'analisis' ? <Analisis /> : pagina === 'ventas' ? <Ventas /> : pagina === 'config' ? <Configuracion /> : pagina === 'sistema' && ctx.yo.rol === 'admin' ? <Sistema /> : <Inicio />}
         </main>
       </div>
     </Contexto.Provider>

@@ -36,7 +36,7 @@ export function GraficoSerie({ datos, moneda, objetivo, maximo }: { datos: Punto
         {ticks.map((t) => (
           <g key={t}>
             <line x1={ml} x2={ancho - mr} y1={yC(t)} y2={yC(t)} className="grilla" />
-            <text x={ml - 6} y={yC(t) + 4} textAnchor="end">{dinero(t, moneda).replace(/,\d+$/, '')}</text>
+            <text x={ml - 6} y={yC(t) + 4} textAnchor="end">{maxC / 1.15 < 10 ? dinero(t, moneda) : dinero(t, moneda).replace(/,\d+$/, '')}</text>
           </g>
         ))}
         {datos.map((p, i) => <rect key={p.fecha} x={x(i) - paso * 0.35} width={paso * 0.7} y={yI(p.inversion)} height={H - mb - yI(p.inversion)} rx={2} className={`barra-inv ${sel === i ? 'sel' : ''}`} />)}

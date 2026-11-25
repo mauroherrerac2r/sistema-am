@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import type { CfgCuenta, CuentaMeta, Dia, FilaAnuncioCruda } from './reglas';
 import { canalAnuncio } from './reglas';
 import type { VentaAnuncio } from './ventas';
+import type { AdDiario, AdInfo, AdsetInfo, CampanaInfo, EstadoReco, BriefAM } from './reglasPM';
 
 export interface Perfil { id: string; email: string; nombre: string | null; rol: 'admin' | 'am' | 'pm' }
 export interface Cliente { id: string; slug: string; nombre: string; am_id: string | null; pm_id: string | null; activo: boolean; contexto_ia: string | null; roas_objetivo: number | null; drive_carpeta_id: string | null }
@@ -31,7 +32,7 @@ export async function cargarConfig() {
   const cuentasCfg: CfgCuenta[] = (cfg.data || []).map((c: any) => ({
     ad_account_id: c.ad_account_id, client_id: c.client_id, sede: c.sede, canales: c.canales || [],
     presupuesto_semanal: num(c.presupuesto_semanal), cpl_objetivo: num(c.cpl_objetivo), cpl_maximo: num(c.cpl_maximo),
-    activa: c.activa, nota: c.nota,
+    activa: c.activa, nota: c.nota, pm_id: c.pm_id ?? null,
   }));
   return {
     perfiles: (perfiles.data || []) as Perfil[],
@@ -181,4 +182,63 @@ export async function guardarContextoCarga(id: string, contexto: string | null) 
 export async function estadoDrive(): Promise<{ cuenta_email: string | null; conectado_en: string; ultimo_error: string | null } | null> {
   const { data } = await supabase.from('integraciones_publico').select('cuenta_email,conectado_en,ultimo_error').eq('id', 'google_drive').maybeSingle();
   return data as any;
+}
+
+// ---------------- Panel de Paid Media ----------------
+
+export async function anunciosDiarios(cuentas: string[], desde: string): Promise<AdDiario[]> {
+  if (!cuentas.length) return [];
+  const rows = await todas<any>((a, b) => supabase.from('insights_daily')
+    .select('objeto_id,ad_account_id,adset_id,campaign_id,fecha,inversion,impresiones,clics_enlace,leads,conversaciones')
+    .eq('nivel', 'ad').in('ad_account_id', cuentas).gte('fecha', desde).order('fecha').range(a, b));
+  return rows.map((r) => ({ ad_id: r.objeto_id, ad_account_id: r.ad_account_id, adset_id: r.adset_id, campaign_id: r.campaign_id, fecha: r.fecha,
+    inversion: Number(r.inversion), impresiones: Number(r.impresiones), clics_enlace: Number(r.clics_enlace), leads: r.leads, conversaciones: r.conversaciones }));
+}
+
+export async function estructuraCuentas(cuentas: string[]) {
+  if (!cuentas.length) return { ads: new Map<string, AdInfo>(), adsets: new Map<string, AdsetInfo>(), campanas: new Map<string, CampanaInfo>() };
+  const [ads, adsets, camps] = await Promise.all([
+    todas<any>((a, b) => supabase.from('ads').select('id,nombre,estado_efectivo,miniatura,formato,creado_meta,adset_id,campaign_id').in('ad_account_id', cuentas).range(a, b)),
+    todas<any>((a, b) => supabase.from('adsets').select('id,ad_account_id,campaign_id,nombre,estado_efectivo,presupuesto_diario,aprendizaje,destino').in('ad_account_id', cuentas).range(a, b)),
+    todas<any>((a, b) => supabase.from('campaigns').select('id,nombre,objetivo,presupuesto_diario,estado_efectivo').in('ad_account_id', cuentas).range(a, b)),
+  ]);
+  return {
+    ads: new Map(ads.map((x) => [x.id, x as AdInfo])),
+    adsets: new Map(adsets.map((x) => [x.id, { ...x, presupuesto_diario: num(x.presupuesto_diario) } as AdsetInfo])),
+    campanas: new Map(camps.map((x) => [x.id, { ...x, presupuesto_diario: num(x.presupuesto_diario) } as CampanaInfo])),
+  };
+}
+
+export async function ubicaciones(cuentas: string[], desde: string, hasta: string) {
+  if (!cuentas.length) return [];
+  return todas<any>((a, b) => supabase.from('insights_ubicacion').select('ad_account_id,fecha,plataforma,posicion,inversion,impresiones,clics_enlace,leads,conversaciones')
+    .in('ad_account_id', cuentas).gte('fecha', desde).lte('fecha', hasta).range(a, b));
+}
+
+export async function estadosRecos(cuentas: string[]): Promise<EstadoReco[]> {
+  if (!cuentas.length) return [];
+  const { data, error } = await supabase.from('recomendaciones_estado').select('clave,estado,hasta').in('ad_account_id', cuentas);
+  if (error) throw new Error(error.message);
+  return (data || []) as EstadoReco[];
+}
+
+export async function guardarEstadoReco(clave: string, ad_account_id: string, estado: EstadoReco['estado'] | null, hasta: string) {
+  const r = estado
+    ? await supabase.from('recomendaciones_estado').upsert({ clave, ad_account_id, estado, hasta, actualizado_en: new Date().toISOString() }, { onConflict: 'clave' })
+    : await supabase.from('recomendaciones_estado').delete().eq('clave', clave);
+  if (r.error) throw new Error(r.error.message);
+}
+
+/** Último análisis "versión Paid Media" listo por cliente, de los últimos 14 días. */
+export async function briefsRecientes(clientes: string[], desde: string): Promise<BriefAM[]> {
+  if (!clientes.length) return [];
+  const { data } = await supabase.from('analisis_ia').select('creado_en,carga_id, ventas_cargas!inner(client_id)').eq('tipo', 'paid').eq('estado', 'listo')
+    .gte('creado_en', desde).in('ventas_cargas.client_id', clientes).order('creado_en', { ascending: false });
+  const vistos = new Set<string>(), out: BriefAM[] = [];
+  for (const r of (data || []) as any[]) {
+    const c = r.ventas_cargas.client_id;
+    if (vistos.has(c)) continue;
+    vistos.add(c); out.push({ client_id: c, fecha: r.creado_en, carga_id: r.carga_id });
+  }
+  return out;
 }

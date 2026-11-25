@@ -60,17 +60,30 @@ export async function frecuencia7d(meta: MetaClient, accountId: string, rango: R
   return rows.map((r) => ({ ad_id: String(r.ad_id), ad_account_id: accountId, hasta: rango.until, alcance: r.reach != null ? Math.round(Number(r.reach)) : null, frecuencia: r.frequency != null ? Number(r.frequency) : null }));
 }
 
+/** Inversión y resultados por ubicación (plataforma + posición), por día. */
+export async function ubicacionesCuenta(meta: MetaClient, accountId: string, rango: Rango) {
+  const rows = await meta.getAll<any>(`act_${accountId}/insights`, {
+    level: 'account', time_range: rango, time_increment: 1, breakdowns: 'publisher_platform,platform_position',
+    fields: 'spend,impressions,inline_link_clicks,actions', limit: 500,
+  });
+  return rows.map((r) => {
+    const f = aFila('account', accountId, r);
+    return { ad_account_id: accountId, fecha: r.date_start, plataforma: String(r.publisher_platform || 'desconocida'), posicion: String(r.platform_position || 'desconocida'),
+      inversion: f.inversion, impresiones: f.impresiones, clics_enlace: f.clics_enlace, leads: f.leads, conversaciones: f.conversaciones };
+  });
+}
+
 export async function estructuraCuenta(meta: MetaClient, accountId: string) {
   const [campanas, conjuntos, anuncios] = await Promise.all([
     meta.getAll<any>(`act_${accountId}/campaigns`, { fields: 'id,name,objective,status,effective_status,daily_budget', limit: 500 }),
     meta.getAll<any>(`act_${accountId}/adsets`, { fields: 'id,name,campaign_id,status,effective_status,daily_budget,learning_stage_info,destination_type,optimization_goal', limit: 500 }),
-    meta.getAll<any>(`act_${accountId}/ads`, { fields: 'id,name,campaign_id,adset_id,status,effective_status,created_time', limit: 500 }),
+    meta.getAll<any>(`act_${accountId}/ads`, { fields: 'id,name,campaign_id,adset_id,status,effective_status,created_time,creative{thumbnail_url,object_type}', thumbnail_width: 320, thumbnail_height: 320, limit: 200 }),
   ]);
   const cent = (v: any) => (v != null ? Number(v) / 100 : null);
   return {
     campaigns: campanas.map((c) => ({ id: c.id, ad_account_id: accountId, nombre: c.name, objetivo: c.objective ?? null, estado: c.status ?? null, estado_efectivo: c.effective_status ?? null, presupuesto_diario: cent(c.daily_budget) })),
     adsets: conjuntos.map((s) => ({ id: s.id, ad_account_id: accountId, campaign_id: s.campaign_id ?? null, nombre: s.name, estado: s.status ?? null, estado_efectivo: s.effective_status ?? null, presupuesto_diario: cent(s.daily_budget), aprendizaje: s.learning_stage_info?.status ?? null, destino: s.destination_type ?? null, optimizacion: s.optimization_goal ?? null })),
-    ads: anuncios.map((a) => ({ id: a.id, ad_account_id: accountId, campaign_id: a.campaign_id ?? null, adset_id: a.adset_id ?? null, nombre: a.name, estado: a.status ?? null, estado_efectivo: a.effective_status ?? null, creado_meta: a.created_time ?? null })),
+    ads: anuncios.map((a) => ({ id: a.id, ad_account_id: accountId, campaign_id: a.campaign_id ?? null, adset_id: a.adset_id ?? null, nombre: a.name, estado: a.status ?? null, estado_efectivo: a.effective_status ?? null, creado_meta: a.created_time ?? null, miniatura: a.creative?.thumbnail_url ?? null, formato: a.creative?.object_type ?? null })),
   };
 }
 
