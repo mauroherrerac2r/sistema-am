@@ -365,8 +365,13 @@ alter table analisis_ia add column if not exists fuentes jsonb;
 
 -- El PM se asigna por cuenta (dos PM pueden compartir un cliente, nunca una cuenta).
 alter table client_accounts add column if not exists pm_id uuid references profiles (id) on delete set null;
--- Si se había cargado PM a nivel cliente, se copia a sus cuentas.
-update client_accounts ca set pm_id = c.pm_id from clients c where ca.client_id = c.id and ca.pm_id is null and c.pm_id is not null;
+-- Si se había cargado PM a nivel cliente (script 0006), se copia a sus cuentas. Sin 0006 no hace nada.
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'clients' and column_name = 'pm_id') then
+    execute 'update client_accounts ca set pm_id = c.pm_id from clients c where ca.client_id = c.id and ca.pm_id is null and c.pm_id is not null';
+  end if;
+end $$;
 
 -- Creativo de cada anuncio.
 alter table ads add column if not exists miniatura text;   -- URL de Meta (vence; se renueva cada noche)
