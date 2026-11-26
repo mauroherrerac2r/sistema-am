@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { Logo, NOMBRE_SISTEMA } from './marca';
 
 const DOMINIO = import.meta.env.VITE_DOMINIO_GOOGLE || 'picallex.com';
 
@@ -37,7 +38,8 @@ export function Login() {
 
   return (
     <div className="login">
-      <h1>Sistema AM</h1>
+      <Logo alto={34} />
+      <h1>{NOMBRE_SISTEMA}</h1>
       <button className="btn primario google" onClick={google}>Entrar con Google</button>
       <p className="nota">Con tu cuenta @{DOMINIO}. Si es tu primer ingreso y no te deja, pedile a un admin que te dé de alta.</p>
       {error && <p className="mal">{error}</p>}

@@ -1,4 +1,4 @@
-# Sistema AM · Especificación
+# Centro de Control · Clic2Ring · Especificación
 
 ## Objetivo
 Darle a cada Account Manager una herramienta propia para (1) controlar la operación diaria de sus cuentas

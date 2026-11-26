@@ -1,4 +1,4 @@
-# Sistema AM
+# Centro de Control · Clic2Ring
 
 App interna para Account Managers (y luego Paid Media): datos de Meta Ads propios, sincronizados con los
 usuarios de sistema de cada Business Manager, sin depender de conectores de terceros.

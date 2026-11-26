@@ -8,6 +8,7 @@ import { Configuracion } from './Configuracion';
 import { Sistema } from './Sistema';
 import { Ventas } from './Ventas';
 import { PaidMedia } from './PaidMedia';
+import { Marca } from './marca';
 import { cargarConfig } from './datos';
 import { Contexto, Ctx } from './contexto';
 
@@ -75,7 +76,7 @@ function Interna({ sesion }: { sesion: Session }) {
     <Contexto.Provider value={ctx}>
       <div className="app">
         <header className="barra-sup">
-          <strong className="marca">Sistema AM</strong>
+          <Marca />
           <nav className="nav">
             {PAGINAS.filter((p) => p.id !== 'sistema' || ctx.yo.rol === 'admin').map((p) => (
               <a key={p.id} href={`#${p.id}`} className={pagina === p.id ? 'on' : ''}>{p.titulo}</a>

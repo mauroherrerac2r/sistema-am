@@ -1,10 +1,14 @@
 :root {
+  /* Marca Clic2Ring */
+  --marca-amarillo: #FFB900; --marca-gris: #575757;
+  --primario: #575757; --primario-texto: #ffffff;
   --bg: #f6f5f1; --panel: #ffffff; --fg: #1d1d1b; --muted: #6b6a64; --linea: #e3e1da; --hover: #f1efe9;
   --ok: #2e7d4f; --aviso: #a86a00; --mal: #b3261e; --neutro: #b9b7ae; --serie: #3b6fd8; --ref: #8a8880;
   --radio: 10px; color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #151514; --panel: #1f1f1d; --fg: #ecebe6; --muted: #a09f99; --linea: #34332f; --hover: #2a2a27;
+  :root { --primario: #ecebe6; --primario-texto: #1d1d1b;
+    --bg: #151514; --panel: #1f1f1d; --fg: #ecebe6; --muted: #a09f99; --linea: #34332f; --hover: #2a2a27;
     --ok: #6cc08b; --aviso: #e0a93c; --mal: #f08a80; --neutro: #55544f; --serie: #7da2f0; --ref: #8d8b84; }
 }
 * { box-sizing: border-box; }
@@ -247,3 +251,19 @@ td.sangria { padding-left: 26px; }
 .ficha-cliente::before { content: "▸"; color: var(--muted); }
 details[open] > .ficha-cliente::before { content: "▾"; }
 details[open] > .ficha-cliente { margin-bottom: 10px; }
+
+/* ---------- Identidad Clic2Ring ---------- */
+.barra-sup { border-top: 3px solid var(--marca-amarillo); }
+.marca { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); }
+.marca-sep { width: 1px; height: 22px; background: var(--linea); }
+.marca-nombre { font-size: 14px; font-weight: 600; letter-spacing: .01em; color: var(--muted); }
+.nav a.on { background: var(--primario); color: var(--primario-texto); box-shadow: inset 0 -3px 0 var(--marca-amarillo); }
+.btn.primario { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
+.btn.primario:hover { filter: brightness(1.12); background: var(--primario); }
+.btn.on { border-color: var(--primario); box-shadow: inset 0 -2px 0 var(--marca-amarillo); }
+.nro { background: var(--marca-amarillo); color: #1d1d1b; font-weight: 700; }
+:focus-visible { outline: 2px solid var(--marca-amarillo); outline-offset: 2px; }
+.login { border-top: 4px solid var(--marca-amarillo); align-items: stretch; }
+.login h1 { font-size: 17px; color: var(--muted); font-weight: 600; margin: 4px 0 8px; }
+.login .google { background: var(--primario); border-color: var(--primario); color: var(--primario-texto); }
+@media (max-width: 640px) { .marca-nombre, .marca-sep { display: none; } }
